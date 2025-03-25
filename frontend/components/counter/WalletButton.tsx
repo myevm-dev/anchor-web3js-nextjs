@@ -1,12 +1,14 @@
 "use client";
-import React from "react";
-import dynamic from "next/dynamic";
+
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+
+import React from "react";
+import dynamic from "next/dynamic";
 
 // Nextjs hydration error fix
 const WalletMultiButton = dynamic(

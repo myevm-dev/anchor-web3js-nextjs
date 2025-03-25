@@ -1,4 +1,4 @@
-import SolanaCounter from "@/components/counter";
+import { CounterCard } from "@/components/counter/CounterCard";
 
 export default function Home() {
   return (
@@ -10,12 +10,12 @@ export default function Home() {
           Solana Counter App
         </h1>
         <p className="text-gray-400">
-          A minimal dApp built with Anchor & Shadcn UI
+          A minimal dApp built with Anchor & Next.js
         </p>
       </div>
 
       <div className="relative z-10">
-        <SolanaCounter />
+        <CounterCard />
       </div>
 
       <footer className="mt-20 text-center text-sm text-gray-500 relative z-10">

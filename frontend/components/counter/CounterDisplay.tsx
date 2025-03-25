@@ -1,6 +1,8 @@
 "use client";
-import React, { useState, useEffect, useCallback } from "react";
-import { useSolanaCounter } from "./useSolanaCounter";
+
+import React, { useCallback, useEffect, useState } from "react";
+
+import { useProgram } from "./hooks/useProgram";
 
 /**
  * CounterDisplay component that displays the current counter value
@@ -8,13 +10,13 @@ import { useSolanaCounter } from "./useSolanaCounter";
  */
 export function CounterDisplay() {
   // Get program information from the hook
-  const { program, counterAddress, connection } = useSolanaCounter();
+  const { program, counterAddress, connection } = useProgram();
 
   // Local state
   const [counterValue, setCounterValue] = useState<number | null>(null);
   const [isFetchingCounter, setIsFetchingCounter] = useState(true);
 
-  // Fetch counter value from the chain
+  // Fetch counter account to get the count value
   const fetchCounterValue = useCallback(async () => {
     if (!connection || !program) return;
 
@@ -68,7 +70,7 @@ export function CounterDisplay() {
       };
     } catch (err) {
       console.error("Error setting up account subscription:", err);
-      return () => {}; // Empty cleanup function
+      return () => {};
     }
   }, [connection, counterAddress, program]);
 

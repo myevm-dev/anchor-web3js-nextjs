@@ -1,16 +1,19 @@
 "use client";
+
+import * as anchor from "@coral-xyz/anchor";
+
+import { LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import {
   useAnchorWallet,
   useConnection,
   useWallet,
 } from "@solana/wallet-adapter-react";
-import * as anchor from "@coral-xyz/anchor";
-import { Counter } from "@/lib/program-idl/idl";
-import Idl from "@/lib/program-idl/idl.json";
-import { PublicKey } from "@solana/web3.js";
 
-// Simplified interface for the hook
-interface UseSolanaCounterReturn {
+import { Counter } from "@/anchor-idl/idl";
+import Idl from "@/anchor-idl/idl.json";
+import { useEffect } from "react";
+
+interface UseProgramReturn {
   program: anchor.Program<Counter>;
   counterAddress: PublicKey;
   publicKey: PublicKey | null;
@@ -19,10 +22,11 @@ interface UseSolanaCounterReturn {
 }
 
 /**
- * A simplified hook that provides access to the Solana program and counter address.
- * This hook only handles the basic setup and doesn't manage state or interactions.
+ * A hook that provides access to the Solana program, counter address,
+ * connected wallet, and connection.
+ * This hook handles the basic setup for the program.
  */
-export function useSolanaCounter(): UseSolanaCounterReturn {
+export function useProgram(): UseProgramReturn {
   const { publicKey, connected } = useWallet();
   const { connection } = useConnection();
   const wallet = useAnchorWallet();
@@ -30,7 +34,7 @@ export function useSolanaCounter(): UseSolanaCounterReturn {
   // Program initialization - conditionally create with provider if wallet connected
   let program;
   if (wallet) {
-    // Create a provider with the wallet for transaction signing capability
+    // Create a provider with the wallet for transaction signing
     const provider = new anchor.AnchorProvider(connection, wallet, {
       preflightCommitment: "confirmed",
     });
@@ -40,10 +44,31 @@ export function useSolanaCounter(): UseSolanaCounterReturn {
     program = new anchor.Program<Counter>(Idl, { connection });
   }
 
+  // Get the counter account address
   const counterAddress = PublicKey.findProgramAddressSync(
     [Buffer.from("counter")],
     new PublicKey(Idl.address)
   )[0];
+
+  // Fund connected wallet with devnet SOL
+  useEffect(() => {
+    const airdropDevnetSol = async () => {
+      if (!publicKey) return;
+
+      try {
+        const balance = await connection.getBalance(publicKey);
+        const solBalance = balance / LAMPORTS_PER_SOL;
+
+        if (solBalance < 1) {
+          await connection.requestAirdrop(publicKey, LAMPORTS_PER_SOL);
+        }
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    airdropDevnetSol();
+  }, [publicKey]);
 
   return {
     program,

@@ -1,7 +1,9 @@
 "use client";
-import React, { useState, MouseEvent } from "react";
+
+import { Check, ClipboardCopy } from "lucide-react";
+import React, { MouseEvent, useState } from "react";
+
 import { Button } from "@/components/ui/button";
-import { ClipboardCopy, Check } from "lucide-react";
 
 interface ToastContentProps {
   transactionSignature: string;
