@@ -4,6 +4,25 @@
 
 A beginner-friendly template for building applications (dApps) on Solana using Anchor and Next.js. This template implements a counter program that demonstrates essential Solana development concepts including PDAs (Program Derived Addresses), CPIs (Cross-Program Invocations), and state management.
 
+https://github.com/user-attachments/assets/65b181aa-0111-408d-97e6-358f9bbdc6c7
+
+To try the demo, make sure to use a test wallet connected to devnet.
+
+<table>
+  <tr>
+    <th align="center">Phantom</th>
+    <th align="center">Solflare</th>
+  </tr>
+  <tr>
+    <td align="center">
+      <video src="https://github.com/user-attachments/assets/a5897696-5cdc-4e91-9c74-1ea4a624c59e" alt="Phantom" />
+    </td>
+    <td align="center">
+      <video src="https://github.com/user-attachments/assets/4b44b357-bc9f-410a-a024-f2cb6d4c2aee" alt="Solflare" />
+    </td>
+  </tr>
+</table>
+
 This template is for educational purposes and set up for devnet use only.
 
 ## 🎓 Educational Purpose
