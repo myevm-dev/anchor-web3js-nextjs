@@ -1,5 +1,7 @@
 # Solana Counter dApp Template
 
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fsolana-developers%2Fanchor-web3js-nextjs&root-directory=frontend&demo-title=Anchor%20Web3.js%20Next.js%20Demo&demo-description=An%20example%20deployment%20of%20the%20Anchor%20Web3.js%20Next.js%20project.&demo-url=https%3A%2F%2Fanchor-web3js-nextjs.vercel.app%2F&project-name=anchor-web3js-nextjs&repository-name=anchor-web3js-nextjs)
+
 A beginner-friendly template for building applications (dApps) on Solana using Anchor and Next.js. This template implements a counter program that demonstrates essential Solana development concepts including PDAs (Program Derived Addresses), CPIs (Cross-Program Invocations), and state management.
 
 This template is for educational purposes and set up for devnet use only.
