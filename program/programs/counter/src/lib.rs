@@ -25,8 +25,8 @@ pub mod counter {
 
         // Set up the CPI (Cross-Program Invocation) to transfer SOL from user to vault
         let cpi_accounts = system_program::Transfer {
-            from: ctx.accounts.user.to_account_info(),    // Source: user's wallet
-            to: ctx.accounts.vault.to_account_info(),     // Destination: program's vault PDA
+            from: ctx.accounts.user.to_account_info(), // Source: user's wallet
+            to: ctx.accounts.vault.to_account_info(),  // Destination: program's vault PDA
         };
         // Get the System Program account which will process the transfer
         let cpi_program = ctx.accounts.system_program.to_account_info();
@@ -59,23 +59,22 @@ pub mod counter {
         // Get the user's public key and create the seeds for the vault PDA
         let user_key = ctx.accounts.user.key();
         let seeds = [
-            b"vault".as_ref(),                // The string "vault" as bytes
-            user_key.as_ref(),                // The user's public key as bytes
-            &[ctx.bumps.vault],               // The bump seed to make the PDA unique
+            b"vault".as_ref(),  // The string "vault" as bytes
+            user_key.as_ref(),  // The user's public key as bytes
+            &[ctx.bumps.vault], // The bump seed to make the PDA unique
         ];
         // Create a reference to the seeds for signing
         let signer_seeds = &[&seeds[..]];
 
         // Set up the CPI to transfer SOL from vault back to user
         let cpi_accounts = system_program::Transfer {
-            from: ctx.accounts.vault.to_account_info(),    // Source: program's vault PDA
-            to: ctx.accounts.user.to_account_info(),       // Destination: user's wallet
+            from: ctx.accounts.vault.to_account_info(), // Source: program's vault PDA
+            to: ctx.accounts.user.to_account_info(),    // Destination: user's wallet
         };
         // Get the System Program account
         let cpi_program = ctx.accounts.system_program.to_account_info();
         // Create the CPI Context with signer seeds (needed because vault is a PDA)
-        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts)
-            .with_signer(signer_seeds);  // Add PDA signer seeds for program signing
+        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts).with_signer(signer_seeds); // Add PDA signer seeds for program signing
 
         // Execute the transfer of 0.001 SOL (1_000_000 lamports) from vault to user
         system_program::transfer(cpi_ctx, 1_000_000)?;
