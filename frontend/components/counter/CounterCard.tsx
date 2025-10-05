@@ -6,7 +6,7 @@ import { CounterDisplay } from "./CounterDisplay";
 import { DecrementButton } from "./DecrementButton";
 import { IncrementButton } from "./IncrementButton";
 import React from "react";
-import { WalletButton } from "./WalletButton";
+import { WalletButton } from "../WalletButton";
 
 /**
  * CounterCard is the main component for the Counter dApp.

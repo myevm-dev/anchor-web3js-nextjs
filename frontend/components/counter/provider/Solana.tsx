@@ -1,15 +1,8 @@
 "use client";
 
 import React, { FC, ReactNode, useMemo } from "react";
-import {
-  ConnectionProvider,
-  WalletProvider,
-} from "@solana/wallet-adapter-react";
-import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
+import { ConnectionProvider, WalletProvider } from "@solana/wallet-adapter-react";
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
-import { clusterApiUrl } from "@solana/web3.js";
-
-// Import the wallet adapter styles
 import "@solana/wallet-adapter-react-ui/styles.css";
 
 interface SolanaProviderProps {
@@ -17,14 +10,19 @@ interface SolanaProviderProps {
 }
 
 export const SolanaProvider: FC<SolanaProviderProps> = ({ children }) => {
-  // The network can be set to 'devnet', 'testnet', or 'mainnet-beta'
-  const network = WalletAdapterNetwork.Devnet;
-
-  // You can also provide a custom RPC endpoint
-  const endpoint = useMemo(() => clusterApiUrl(network), [network]);
+  const key = process.env.NEXT_PUBLIC_ALCHEMY_KEY!;
+  const httpEndpoint = useMemo(() => `https://solana-mainnet.g.alchemy.com/v2/${key}`, [key]);
+  const wsEndpoint = useMemo(() => `wss://solana-mainnet.g.alchemy.com/v2/${key}`, [key]);
 
   return (
-    <ConnectionProvider endpoint={endpoint}>
+    <ConnectionProvider
+      endpoint={httpEndpoint}
+      config={{
+        wsEndpoint,
+        commitment: "confirmed",
+        disableRetryOnRateLimit: false,
+      }}
+    >
       <WalletProvider wallets={[]} autoConnect>
         <WalletModalProvider>{children}</WalletModalProvider>
       </WalletProvider>
