@@ -18,6 +18,7 @@ const MINTS = [
   "8Y5MwnUM19uqhnsrFnKijrmn33CmHBTUoedXtTGDpump",
   "34AeqX5MQGyrey2VnZdkeZCfM4qinp4F3X7pGxtipump",
   "9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump",
+  "FQrNCk7HkXFEThzbtpdxqX5KaifLXAnPzseWXvksbonk",
 ];
 
 // simple demo numbers for rewards/TVL

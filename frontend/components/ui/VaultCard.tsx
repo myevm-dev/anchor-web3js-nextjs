@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { detectLaunchpad } from "@/lib/launchpad";
 
 export type VaultSummary = {
   mint: string;
@@ -31,7 +32,6 @@ function shortAddr(a: string) {
   return a.length > 12 ? `${a.slice(0, 4)}…${a.slice(-4)}` : a;
 }
 
-// Normalize common gateways so Next <Image> accepts them or bypass optimizer.
 function normalizeImageUrl(url?: string) {
   if (!url) return "";
   let u = url.trim();
@@ -53,12 +53,12 @@ export default function VaultCard({
   const status =
     v.endTime && now >= v.endTime ? "ended" : v.startTime && now < v.startTime ? "upcoming" : "active";
 
-  const isPumpFun = v.mint.toLowerCase().endsWith("pump");
+  const launchpad = detectLaunchpad(v.mint);
   const perDay = (v.emissionPerSec ?? 0) * 86400;
 
-  const nameNode = isPumpFun ? (
+  const nameNode = launchpad.kind === "pump" && launchpad.link ? (
     <Link
-      href={`https://pump.fun/advanced/coin/${v.mint}`}
+      href={launchpad.link}
       target="_blank"
       className="text-white hover:opacity-90 transition"
       title="Open on pump.fun"
@@ -114,14 +114,14 @@ export default function VaultCard({
       <div className="p-3">
         {/* title row */}
         <div className="flex items-center gap-2">
-          {isPumpFun && (
+          {launchpad.logoSrc && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src="/images/pumplogo.webp" alt="pump.fun" className="h-4 w-4 rounded-sm" />
+            <img src={launchpad.logoSrc} alt={launchpad.kind || "launchpad"} className="h-4 w-4 rounded-sm" />
           )}
           <div className="font-semibold truncate">{nameNode}</div>
         </div>
 
-        {/* symbol • short address (on the same line) */}
+        {/* symbol • short address */}
         <div className="mt-0.5 flex items-center gap-2 text-xs">
           <div className="text-gray-300">{v.symbol || "—"}</div>
           <div className="text-gray-500">•</div>
@@ -136,7 +136,6 @@ export default function VaultCard({
           </Link>
         </div>
 
-        {/* decimals */}
         {typeof v.decimals === "number" && (
           <div className="text-[11px] text-gray-400 mt-0.5">{v.decimals} decimals</div>
         )}

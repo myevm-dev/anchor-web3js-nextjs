@@ -7,7 +7,7 @@ import { getMint } from "@solana/spl-token";
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import { publicKey as umiPk } from "@metaplex-foundation/umi";
 import { fetchMetadataFromSeeds } from "@metaplex-foundation/mpl-token-metadata";
-
+import { detectLaunchpad } from "@/lib/launchpad";
 type Props = {
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -47,12 +47,9 @@ export function CreateVaultModal({ open, onOpenChange, onSubmit }: Props) {
 const validMintPk = useMemo(() => {
   try { return mintStr ? new PublicKey(mintStr) : null; } catch { return null; }
 }, [mintStr]);
-
+const launchpad = detectLaunchpad(validMintPk?.toBase58() || mintStr);
 // pump.fun mint? (no PK needed)
-const isPumpFun = useMemo(() => {
-  const s = mintStr.trim().toLowerCase();
-  return s.endsWith("pump"); // e.g. ...Amgeppump
-}, [mintStr]);
+
   const format = (n: number) =>
     n.toLocaleString(undefined, { maximumFractionDigits: 6 });
 
@@ -177,21 +174,22 @@ const isPumpFun = useMemo(() => {
   </div>
 
   {/* Symbol (line 2) with optional Pump.fun badge */}
-{(tokenSymbol || isPumpFun) && (
+{/* Symbol line (with optional launchpad badge) */}
+{(tokenSymbol || launchpad.isKnown) && (
   <div className="text-sm text-gray-300 flex items-center gap-2">
-    {isPumpFun && (
-      // from public/images/pumplogo.webp
+    {launchpad.logoSrc && (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src="/images/pumplogo.webp"
-        alt="pump.fun"
+        src={launchpad.logoSrc}
+        alt={launchpad.kind || "launchpad"}
         className="h-4 w-4 rounded-sm"
         aria-hidden="true"
       />
     )}
-    <span>{tokenSymbol || "Pump.fun token"}</span>
+    <span>{tokenSymbol || (launchpad.kind === "pump" ? "Pump.fun token" : launchpad.kind === "bonk" ? "Bonk.fun token" : "Token")}</span>
   </div>
 )}
+
 
   {/* Decimals (line 3) */}
   {decimals != null && (
