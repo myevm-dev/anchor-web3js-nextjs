@@ -1,3 +1,4 @@
+// components/ui/ManageVaultCard.tsx
 "use client";
 
 import Link from "next/link";
@@ -26,20 +27,23 @@ function shortAddr(a: string) {
 function normalizeImageUrl(url?: string) {
   if (!url) return "";
   let u = url.trim();
-  if (u.startsWith("ipfs://")) u = `https://ipfs.io/ipfs/${u.replace("ipfs://", "")}`;
+  if (u.startsWith("ipfs://")) {
+    const cid = u.replace("ipfs://", "");
+    u = `https://ipfs.io/ipfs/${cid}`;
+  }
   return u;
 }
 
 export default function ManageVaultCard({
   v,
-  onOpen,
-  onPause,
-  onEnd,
+  onClone,
+  onBoost,
+  onHide,
 }: {
   v: ManageVault;
-  onOpen?: (mint: string) => void;
-  onPause?: (mint: string) => void;
-  onEnd?: (mint: string) => void;
+  onClone?: (mint: string) => void;
+  onBoost?: (mint: string) => void;
+  onHide?: (mint: string) => void;
 }) {
   const now = Math.floor(Date.now() / 1000);
   const status: "active" | "upcoming" | "ended" =
@@ -52,13 +56,21 @@ export default function ManageVaultCard({
 
   const launchpad = detectLaunchpad(v.mint);
 
-  // super rough placeholder calc for demo
-  const perSec =
-    v.rewardNet != null ? v.rewardNet / (182 * 24 * 60 * 60) : undefined;
+  // emission (demo, mirrors your prior logic)
+  const perSec = v.rewardNet != null ? v.rewardNet / (182 * 24 * 60 * 60) : undefined;
   const perDay = perSec != null ? perSec * 86400 : undefined;
 
+  const stop = (e: React.MouseEvent) => e.stopPropagation();
+
   return (
-    <div className="group rounded-xl border border-white/10 bg-zinc-950/70 hover:bg-zinc-900/70 transition shadow-sm overflow-hidden">
+    <div
+      className="
+        group rounded-xl overflow-hidden
+        border bg-[#0b0f14] transition shadow-sm
+        border-[#7B4DFF]/40 shadow-[0_0_0_1px_rgba(123,77,255,0.08)]
+        hover:border-[#7B4DFF]/60
+      "
+    >
       {/* media */}
       <div className="relative aspect-[16/9] bg-white/5">
         {v.image ? (
@@ -68,6 +80,7 @@ export default function ManageVaultCard({
             fill
             className="object-cover"
             unoptimized
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
           />
         ) : (
           <div className="absolute inset-0 grid place-items-center text-sm text-gray-400">
@@ -75,11 +88,12 @@ export default function ManageVaultCard({
           </div>
         )}
 
-        {/* status pill on solid black */}
+        {/* status pill with solid black backing */}
         <div className="absolute left-2 top-2 z-10">
           <div className="rounded-md bg-black p-0.5">
             <div
-              className={`px-2 py-0.5 rounded text-[11px] font-medium border ${
+              className={`px-2 py-0.5 rounded text-[11px] font-medium border
+              ${
                 status === "active"
                   ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
                   : status === "upcoming"
@@ -105,10 +119,12 @@ export default function ManageVaultCard({
               className="h-4 w-4 rounded-sm"
             />
           )}
-        <div className="font-semibold text-white truncate">{v.name || "Unnamed"}</div>
+          <div className="font-semibold text-white truncate">
+            {v.name || "Unnamed"}
+          </div>
         </div>
 
-        {/* symbol + mint */}
+        {/* symbol • short address */}
         <div className="mt-0.5 flex items-center gap-2 text-xs">
           <div className="text-gray-300">
             {v.symbol ||
@@ -124,22 +140,23 @@ export default function ManageVaultCard({
             target="_blank"
             className="break-all"
             style={{ color: "#14F195", textDecoration: "none" }}
+            title="View on Solana Explorer"
           >
             {shortAddr(v.mint)}
           </Link>
         </div>
 
-        {/* metrics */}
+        {/* metrics (styled like VaultCard) */}
         <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-          <div className="rounded border border-white/10 bg-white/5 p-2">
+          <div className="rounded border p-2 bg-[#0f131a] border-[#7B4DFF]/30">
             <div className="text-gray-400">Rewards (net)</div>
             <div className="font-medium">{format(v.rewardNet)}</div>
           </div>
-          <div className="rounded border border-white/10 bg-white/5 p-2">
+          <div className="rounded border p-2 bg-[#0f131a] border-[#7B4DFF]/30">
             <div className="text-gray-400">TVL (staked)</div>
             <div className="font-medium">{format(v.totalStaked)}</div>
           </div>
-          <div className="rounded border border-white/10 bg-white/5 p-2 col-span-2">
+          <div className="rounded border p-2 col-span-2 bg-[#0f131a] border-[#7B4DFF]/30">
             <div className="text-gray-400">Emission</div>
             <div className="font-medium">
               {perSec != null ? (
@@ -154,35 +171,50 @@ export default function ManageVaultCard({
           </div>
         </div>
 
-        {/* actions */}
+        {/* footer (match spacing/typography) */}
         <div className="mt-3 flex items-center justify-between">
           <div className="text-xs text-gray-400">
-            {v.startTime && v.endTime ? "6 months • fixed" : "Fixed term"}
+            {v.startTime && v.endTime ? "180 days left • fixed" : "Fixed term"}
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => onOpen?.(v.mint)}
-              className="h-8 px-3 rounded-md border border-white/15 bg-white/5 text-white text-xs hover:bg-white/10"
-            >
-              Open
-            </button>
-            <button
-              onClick={() => onPause?.(v.mint)}
-              className="h-8 px-3 rounded-md border border-white/15 bg-white/5 text-white text-xs hover:bg-white/10"
-              disabled
-              title="Pause not implemented"
-            >
-              Pause
-            </button>
-            <button
-              onClick={() => onEnd?.(v.mint)}
-              className="h-8 px-3 rounded-md border border-rose-500/30 bg-rose-500/10 text-rose-200 text-xs hover:bg-rose-500/20"
-              disabled
-              title="End not implemented"
-            >
-              End
-            </button>
-          </div>
+          {/* Mgmt cards don’t show APR; keep right side clean */}
+          <div className="text-xs text-gray-400"></div>
+        </div>
+
+        {/* actions (styled like VaultCard buttons) */}
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <button
+            onClick={(e) => {
+              stop(e);
+              onClone?.(v.mint);
+            }}
+            className="h-9 rounded-md border border-violet-500/40 bg-violet-500/15 text-violet-200 text-sm hover:bg-violet-500/25"
+            title="Clone vault config"
+          >
+            Clone
+          </button>
+
+          <button
+  onClick={(e) => {
+    e.stopPropagation();
+    onBoost?.(v.mint);
+  }}
+  disabled
+  className="h-9 rounded-md border border-cyan-500/40 bg-cyan-500/15 text-cyan-200 text-sm hover:bg-cyan-500/25 cursor-not-allowed"
+  title="Boost not implemented"
+>
+  Boost
+</button>
+
+          <button
+            onClick={(e) => {
+              stop(e);
+              onHide?.(v.mint);
+            }}
+            className="h-9 rounded-md border border-rose-500/40 bg-rose-500/15 text-rose-200 text-sm hover:bg-rose-500/25"
+            title="Hide vault"
+          >
+            Hide4You
+          </button>
         </div>
       </div>
     </div>

@@ -37,6 +37,7 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+html { scrollbar-gutter: stable both-edges; }
 /* ==== Light (root) tokens ==== */
 :root {
   --radius: 0.625rem;

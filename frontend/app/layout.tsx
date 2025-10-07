@@ -1,11 +1,10 @@
 // app/layout.tsx
 import "./globals.css";
 import "@solana/wallet-adapter-react-ui/styles.css";
-
 import type { Metadata } from "next";
+import { Suspense } from "react";                    // ⬅️ add
 import { Geist, Geist_Mono } from "next/font/google";
-
-import { SolanaProvider } from "@/components/counter/provider/Solana";
+import { SolanaProvider } from "@/components/providers/SolanaProvider";
 import { NavBar } from "@/components/ui/NavBar";
 import { GlobalSearchBar } from "@/components/ui/GlobalSearchBar";
 import { DemoBanner } from "@/components/ui/DemoBanner";
@@ -24,16 +23,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className="dark overscroll-none">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-950 text-white`}>
         <SolanaProvider>
-          {/* fixed header pieces */}
           <NavBar />
-          <GlobalSearchBar />
+          {/* ⬇️ useSearchParams lives here — wrap it */}
+          <Suspense fallback={null}>
+            <GlobalSearchBar />
+          </Suspense>
 
-          {/* everything below is offset from the fixed header */}
           <div className="pt-[120px] pb-20 md:pb-0">
-            {/* banner sits directly under the search bar */}
             <DemoBanner />
-
-            {children}
+            {/* ⬇️ wrap pages (covers /404 or any page using useSearchParams) */}
+            <Suspense fallback={null}>{children}</Suspense>
 
             <Toaster
               position="bottom-right"
