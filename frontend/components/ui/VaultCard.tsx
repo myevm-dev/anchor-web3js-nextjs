@@ -20,6 +20,12 @@ export type VaultSummary = {
   apr?: number | null;
 };
 
+type Actions = {
+  onDeposit?: (mint: string) => void;
+  onClaim?: (mint: string) => void;
+  onWithdraw?: (mint: string) => void;
+};
+
 function format(n?: number, maxFrac = 6) {
   if (n == null || !isFinite(n)) return "—";
   return n.toLocaleString(undefined, { maximumFractionDigits: maxFrac });
@@ -31,7 +37,6 @@ function pct(n?: number) {
 function shortAddr(a: string) {
   return a.length > 12 ? `${a.slice(0, 4)}…${a.slice(-4)}` : a;
 }
-
 function normalizeImageUrl(url?: string) {
   if (!url) return "";
   let u = url.trim();
@@ -45,10 +50,13 @@ function normalizeImageUrl(url?: string) {
 export default function VaultCard({
   v,
   onClick,
+  onDeposit,
+  onClaim,
+  onWithdraw,
 }: {
   v: VaultSummary;
   onClick?: () => void;
-}) {
+} & Actions) {
   const now = Math.floor(Date.now() / 1000);
   const status =
     v.endTime && now >= v.endTime ? "ended" : v.startTime && now < v.startTime ? "upcoming" : "active";
@@ -56,18 +64,17 @@ export default function VaultCard({
   const launchpad = detectLaunchpad(v.mint);
   const perDay = (v.emissionPerSec ?? 0) * 86400;
 
-  const nameNode = launchpad.kind === "pump" && launchpad.link ? (
-    <Link
-      href={launchpad.link}
-      target="_blank"
-      className="text-white hover:opacity-90 transition"
-      title="Open on pump.fun"
-    >
-      {v.name || "Unnamed"}
-    </Link>
-  ) : (
-    <span className="text-white">{v.name || "Unnamed"}</span>
-  );
+  const nameNode =
+    launchpad.kind === "pump" && launchpad.link ? (
+      <Link href={launchpad.link} target="_blank" className="text-white hover:opacity-90 transition" title="Open on pump.fun">
+        {v.name || "Unnamed"}
+      </Link>
+    ) : (
+      <span className="text-white">{v.name || "Unnamed"}</span>
+    );
+
+  // Stop the card's onClick when pressing an action button
+  const stop = (e: React.MouseEvent) => e.stopPropagation();
 
   return (
     <div
@@ -86,9 +93,7 @@ export default function VaultCard({
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
           />
         ) : (
-          <div className="absolute inset-0 grid place-items-center text-sm text-gray-400">
-            No image
-          </div>
+          <div className="absolute inset-0 grid place-items-center text-sm text-gray-400">No image</div>
         )}
 
         {/* status pill with solid black backing */}
@@ -167,6 +172,37 @@ export default function VaultCard({
           <div className="text-xs font-medium">
             APR: <span className="text-white">{v.apr == null ? "—" : pct(v.apr)}</span>
           </div>
+        </div>
+
+        {/* actions */}
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <button
+            onClick={(e) => {
+              stop(e);
+              onDeposit?.(v.mint);
+            }}
+            className="h-9 rounded-md border border-violet-500/40 bg-violet-500/15 text-violet-200 text-sm hover:bg-violet-500/25"
+          >
+            Deposit
+          </button>
+          <button
+            onClick={(e) => {
+              stop(e);
+              onClaim?.(v.mint);
+            }}
+            className="h-9 rounded-md border border-cyan-500/40 bg-cyan-500/15 text-cyan-200 text-sm hover:bg-cyan-500/25"
+          >
+            Claim
+          </button>
+          <button
+            onClick={(e) => {
+              stop(e);
+              onWithdraw?.(v.mint);
+            }}
+            className="h-9 rounded-md border border-rose-500/40 bg-rose-500/15 text-rose-200 text-sm hover:bg-rose-500/25"
+          >
+            Withdraw
+          </button>
         </div>
       </div>
     </div>

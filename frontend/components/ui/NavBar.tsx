@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { WalletButton } from "../WalletButton";
-import { Home, Settings2, Info } from "lucide-react";
+import { Home, Settings2, Info } from "lucide-react"; // CandlestickChart removed (Trade disabled)
 
 function TopLink({
   href,
@@ -55,7 +55,7 @@ export function NavBar() {
   return (
     <>
       {/* TOP NAV (solid) */}
-      <nav className="fixed top-0 inset-x-0 z-50 border-b border-white/10 bg-[#0b0f14]">
+      <nav className="fixed top-0 inset-x-0 z-50 border-b border-white/10 bg-[#000]">
         <div className="mx-auto max-w-7xl px-4">
           <div className="h-14 flex items-center justify-between gap-4">
             {/* brand */}
@@ -72,17 +72,16 @@ export function NavBar() {
             {/* center links (desktop only) */}
             <div className="hidden md:flex items-center gap-6 text-lg">
               <TopLink href="/" exact>Vaults</TopLink>
+              {/* <TopLink href="/trade">Trade</TopLink>  // TEMP disabled */}
               <TopLink href="/manage">Manage</TopLink>
               <TopLink href="/about">About</TopLink>
             </div>
 
             {/* RIGHT: wallet (desktop normal, mobile compact) */}
             <div className={`flex items-center ${BTN_H}`}>
-              {/* desktop */}
               <div className="hidden sm:block wallet-button-theme">
                 <WalletButton />
               </div>
-              {/* mobile compact */}
               <div className="sm:hidden wallet-button-theme wallet-button-compact">
                 <WalletButton />
               </div>
@@ -97,8 +96,9 @@ export function NavBar() {
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <div className="mx-auto max-w-7xl px-2">
-          <div className="grid grid-cols-3">
+          <div className="grid grid-cols-3">{/* was 4 when Trade was enabled */}
             <MobileLink href="/" label="Vaults" Icon={Home} exact />
+            {/* <MobileLink href="/trade" label="Trade" Icon={CandlestickChart} />  // TEMP disabled */}
             <MobileLink href="/manage" label="Manage" Icon={Settings2} />
             <MobileLink href="/about" label="About" Icon={Info} />
           </div>
