@@ -25,6 +25,21 @@ const SOFT_PURPLE   = "#b685d5"; // section titles on page
 const BG_DARK       = "#0b0f14"; // solid dark panel
 const CYAN_TXT      = "text-cyan-300/90";
 
+// ---- local helper types (remove `any`) ----
+type MaybeEndpoint = { rpcEndpoint?: string; _rpcEndpoint?: string };
+type CssTouch = CSSStyleDeclaration & { touchAction?: string };
+type UmiMetaDataShape =
+  | { data?: { name?: unknown; symbol?: unknown; uri?: unknown } }
+  | { name?: unknown; symbol?: unknown; uri?: unknown };
+type TokenMetaJson = { image?: string | null };
+
+const toStringSafe = (v: unknown): string =>
+  typeof v === "string"
+    ? v
+    : v instanceof Uint8Array
+    ? new TextDecoder().decode(v)
+    : "";
+
 export function CreateVaultModal({ open, onOpenChange, onSubmit }: Props) {
   const { connection } = useConnection();
 
@@ -50,17 +65,17 @@ export function CreateVaultModal({ open, onOpenChange, onSubmit }: Props) {
   const validMintPk = useMemo(() => {
     try { return mintStr ? new PublicKey(mintStr) : null; } catch { return null; }
   }, [mintStr]);
+
   const launchpad = detectLaunchpad(validMintPk?.toBase58() || mintStr);
 
   const format = (n: number) =>
     n.toLocaleString(undefined, { maximumFractionDigits: 6 });
 
-  // Umi with same RPC
+  // Umi with same RPC (typed, no `any`)
   const umi = useMemo(() => {
+    const epHolder = connection as unknown as MaybeEndpoint;
     const endpoint =
-      (connection as any)?.rpcEndpoint ||
-      (connection as any)?._rpcEndpoint ||
-      "https://api.mainnet-beta.solana.com";
+      epHolder.rpcEndpoint ?? epHolder._rpcEndpoint ?? "https://api.mainnet-beta.solana.com";
     return createUmi(endpoint);
   }, [connection]);
 
@@ -72,53 +87,51 @@ export function CreateVaultModal({ open, onOpenChange, onSubmit }: Props) {
   };
   useEffect(() => { if (!open) resetForm(); }, [open]);
 
-// HARD-LOCK background scroll when open + compensate scrollbar width
-useEffect(() => {
-  if (!open) return;
+  // HARD-LOCK background scroll when open + compensate scrollbar width (typed)
+  useEffect(() => {
+    if (!open) return;
 
-  const html = document.documentElement;
-  const body = document.body;
+    const html = document.documentElement;
+    const body = document.body;
 
-  const y = window.scrollY;
-  const prev = {
-    htmlOverflow: html.style.overflow,
-    bodyOverflow: body.style.overflow,
-    bodyPos: body.style.position,
-    bodyTop: body.style.top,
-    bodyWidth: body.style.width,
-    bodyPr: body.style.paddingRight,
-    touch: (body.style as any).touchAction,
-  };
+    const y = window.scrollY;
+    const prev = {
+      htmlOverflow: html.style.overflow,
+      bodyOverflow: body.style.overflow,
+      bodyPos: body.style.position,
+      bodyTop: body.style.top,
+      bodyWidth: body.style.width,
+      bodyPr: body.style.paddingRight,
+      touch: (body.style as CssTouch).touchAction,
+    };
 
-  // scrollbar width (0 on mobile)
-  const sbw = window.innerWidth - html.clientWidth;
+    const sbw = window.innerWidth - html.clientWidth; // 0 on mobile
 
-  // lock scroll
-  body.style.position = "fixed";
-  body.style.top = `-${y}px`;
-  body.style.width = "100%";
-  html.style.overflow = "hidden";
-  body.style.overflow = "hidden";
-  (body.style as any).touchAction = "none";
+    body.style.position = "fixed";
+    body.style.top = `-${y}px`;
+    body.style.width = "100%";
+    html.style.overflow = "hidden";
+    body.style.overflow = "hidden";
+    (body.style as CssTouch).touchAction = "none";
 
-  // compensate the missing scrollbar so layout doesn't shift
-  if (sbw > 0) body.style.paddingRight = `${sbw}px`;
+    if (sbw > 0) body.style.paddingRight = `${sbw}px`;
 
-  return () => {
-    body.style.position = prev.bodyPos;
-    body.style.top = prev.bodyTop;
-    body.style.width = prev.bodyWidth;
-    html.style.overflow = prev.htmlOverflow;
-    body.style.overflow = prev.bodyOverflow;
-    (body.style as any).touchAction = prev.touch || "";
-    body.style.paddingRight = prev.bodyPr;
-    window.scrollTo(0, y);
-  };
-}, [open]);
+    return () => {
+      body.style.position = prev.bodyPos;
+      body.style.top = prev.bodyTop;
+      body.style.width = prev.bodyWidth;
+      html.style.overflow = prev.htmlOverflow;
+      body.style.overflow = prev.bodyOverflow;
+      (body.style as CssTouch).touchAction = prev.touch || "";
+      body.style.paddingRight = prev.bodyPr;
+      window.scrollTo(0, y);
+    };
+  }, [open]);
 
-  // metadata
+  // metadata (no `any`, include connection dep)
   useEffect(() => {
     let cancelled = false;
+
     (async () => {
       setTokenName(""); setTokenSymbol(""); setTokenImage(""); setDecimals(null);
       if (!validMintPk) return;
@@ -130,26 +143,38 @@ useEffect(() => {
         setDecimals(mintAcc.decimals);
 
         try {
-          const md = await fetchMetadataFromSeeds(umi, { mint: umiPk(validMintPk.toBase58()) });
+          const md = (await fetchMetadataFromSeeds(umi, {
+            mint: umiPk(validMintPk.toBase58()),
+          })) as unknown as UmiMetaDataShape;
+
           if (cancelled || !md) return;
 
-          const data: any = (md as any).data ?? md;
-          const name   = (data?.name ?? "").toString().replace(/\0/g, "").trim();
-          const symbol = (data?.symbol ?? "").toString().replace(/\0/g, "").trim();
-          const uri    = (data?.uri ?? "").toString().replace(/\0/g, "").trim();
+          // cover both shapes
+          const container = "data" in md && md.data ? md.data : (md as Record<string, unknown>);
+          const name  = toStringSafe((container as Record<string, unknown>)?.["name"])
+            .replace(/\0/g, "").trim();
+          const symbol = toStringSafe((container as Record<string, unknown>)?.["symbol"])
+            .replace(/\0/g, "").trim();
+          const uri   = toStringSafe((container as Record<string, unknown>)?.["uri"])
+            .replace(/\0/g, "").trim();
 
           setTokenName(name);
           setTokenSymbol(symbol);
 
           if (uri) {
-            const j = await fetch(uri).then(r => r.json()).catch(() => null as any);
+            const j: TokenMetaJson | null = await fetch(uri)
+              .then((r) => r.json() as Promise<TokenMetaJson>)
+              .catch(() => null);
             if (!cancelled && j?.image) setTokenImage(j.image);
           }
-        } catch {}
+        } catch {
+          /* ignore secondary metadata failures */
+        }
       } finally {
         if (!cancelled) setLoadingMeta(false);
       }
     })();
+
     return () => { cancelled = true; };
   }, [validMintPk, connection, umi]);
 
@@ -230,7 +255,12 @@ useEffect(() => {
                         <img src={launchpad.logoSrc} alt={launchpad.kind || "launchpad"} className="h-4 w-4 rounded-sm" />
                       )}
                       <span className="rounded-sm px-1.5 py-0.5 text-[11px] border border-white/15 bg-white/[0.04]">
-                        {tokenSymbol || (launchpad.kind === "pump" ? "Pump.fun token" : launchpad.kind === "bonk" ? "Bonk.fun token" : "Token")}
+                        {tokenSymbol ||
+                          (launchpad.kind === "pump"
+                            ? "Pump.fun token"
+                            : launchpad.kind === "bonk"
+                            ? "Bonk.fun token"
+                            : "Token")}
                       </span>
                     </div>
                   )}
@@ -339,7 +369,7 @@ useEffect(() => {
             </div>
           </div>
         </div>
-      </div>      
+      </div>
     </div>
   );
 }
