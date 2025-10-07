@@ -11,21 +11,31 @@ const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Driplet.fun",
+  title: "Driplet.Fun",
   description: "Immutable 6-month SPL staking vaults",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-950 text-white`}>
+    <html
+      lang="en"
+      className="dark overscroll-none"                    // prevent elastic-overscroll on iOS
+    >
+      <body
+        className={`
+          ${geistSans.variable} ${geistMono.variable}
+          antialiased bg-gray-950 text-white
+          overflow-x-hidden overscroll-none touch-pan-y    // no sideways drag, sane vertical pan
+        `}
+      >
         <SolanaProvider>
           <NavBar />
           <GlobalSearchBar />
 
-
-          <div className="pt-[120px]">
+          {/* Reserve space for top nav and bottom mobile tabs */}
+          <div className="pt-[120px] pb-20 md:pb-0">
             {children}
+
             <Toaster
               position="bottom-right"
               theme="dark"

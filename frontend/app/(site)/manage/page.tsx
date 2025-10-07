@@ -21,22 +21,18 @@ export default function ManagePage() {
 
       <main className="relative z-10 mx-auto max-w-7xl px-4 pt-0 pb-16">
         <header className="mb-6">
-          <div className="flex items-center justify-between">
-            <div>
-                <h1 className="text-3xl md:text-4xl font-semibold text-[#1DBAFC]">
-                  Manage Vaults
-                </h1>
-              <p className="mt-1 text-gray-300">View, filter, and manage your created vaults.</p>
-            </div>
-
-            <Link
-              href="/create"
-              className="h-9 px-3 rounded-md border border-white/15 bg-white/5 text-sm text-white hover:bg-white/10 grid place-items-center"
-            >
-              Create New
-            </Link>
-          </div>
-        </header>
+  <div className="flex items-center justify-between">
+    <h1 className="text-3xl md:text-4xl font-semibold text-[#1DBAFC]">
+      Manage Vaults
+    </h1>
+    <Link
+      href="/create"
+      className="h-12 px-6 rounded-md border border-white/15 bg-white/5 text-sm text-white hover:bg-white/10 grid place-items-center whitespace-nowrap"
+    >
+      Create New
+    </Link>
+  </div>
+</header>
 
         {/* Filters (placeholder) */}
         <section className="rounded-lg border border-white/10 bg-white/5 p-4">
@@ -48,13 +44,7 @@ export default function ManagePage() {
                 className="h-10 rounded-md bg-black/30 text-sm text-white placeholder:text-gray-400 outline-none border border-white/15 px-3 focus:border-white/30"
               />
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-gray-400">Admin (Creator)</label>
-              <input
-                placeholder="Search by admin…"
-                className="h-10 rounded-md bg-black/30 text-sm text-white placeholder:text-gray-400 outline-none border border-white/15 px-3 focus:border-white/30"
-              />
-            </div>
+
             <div className="flex items-end gap-2">
               <button
                 type="button"

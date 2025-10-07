@@ -34,6 +34,7 @@ export function WalletButton() {
             {/* label + medium width (between your two extremes) */}
             <div className="inline-block wallet-button-theme">
               <WalletMultiButton className="!rounded-lg">Sign In</WalletMultiButton>
+
             </div>
           </div>
         </TooltipTrigger>

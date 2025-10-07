@@ -178,3 +178,38 @@ html { scrollbar-width: auto; scrollbar-color: var(--sb-thumb-2) var(--sb-track)
 .scrollbar-fat  { --sb-size: 18px; }
 .scrollbar-thicc{ --sb-size: 22px; }
 .scrollbar-slim { --sb-size: 12px; }
+/* Fallback when `overflow: clip` isn’t supported */
+
+@supports not (overflow: clip) {
+  html, body { overflow-x: hidden; }
+}
+.wallet-button-theme {
+  --wallet-adapter-button-height: 36px;         /* a bit less tall */
+  --wallet-adapter-button-padding: 0 18px;      /* a bit wider */
+  --wallet-adapter-button-border-radius: 12px;
+
+  --wallet-adapter-button-background: #7b4dff;  /* your purple */
+  --wallet-adapter-button-hover-background: #8b5cf6;
+  --wallet-adapter-button-color: #fff;
+}
+
+/* Center label and kill icons when not connected */
+.wallet-button-theme .wallet-adapter-button-trigger {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;   /* <— centers the text */
+  height: var(--wallet-adapter-button-height) !important;
+  padding: var(--wallet-adapter-button-padding) !important;
+  border-radius: var(--wallet-adapter-button-border-radius) !important;
+  min-width: 9.5rem !important;         /* ~152px, tweak to taste */
+}
+
+/* Hide start/end icons while NOT connected so centering is true */
+.wallet-button-theme
+  .wallet-adapter-button-trigger:not(.wallet-adapter-button-connected)
+  .wallet-adapter-button-start-icon,
+.wallet-button-theme
+  .wallet-adapter-button-trigger:not(.wallet-adapter-button-connected)
+  .wallet-adapter-button-end-icon {
+  display: none !important;
+}
