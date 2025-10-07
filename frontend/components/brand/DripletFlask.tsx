@@ -1,82 +1,79 @@
-// DripletFlask.tsx — continuous fill, no diagonal gap
-export default function DripletFlask({
-  size = 200,
-  tintA = "#01fcfc",   // cyan
-  tintB = "#fd01f5",   // magenta
-  stroke = "#0a0a0a",
-}: { size?: number; tintA?: string; tintB?: string; stroke?: string }) {
-  const id = "dripletGrad";
-  const hid = "highlightGrad";
+// High-contrast nav icon (24–32px). Solid white outline + neon glow.
+export default function DripletFlaskMini({
+  size = 28,
+  className = "",
+}: { size?: number; className?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 256 256" role="img" aria-label="Driplet Flask">
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 64 64"
+      aria-hidden="true"
+      className={className}
+    >
       <defs>
-        <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor={tintA}/>
-          <stop offset="100%" stopColor={tintB}/>
+        <linearGradient id="driplet-fill" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#01fcfc" />
+          <stop offset="100%" stopColor="#fd01f5" />
         </linearGradient>
-        {/* subtle highlight, translucent (won't look like empty space) */}
-        <linearGradient id={hid} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.25"/>
-          <stop offset="100%" stopColor="#ffffff" stopOpacity="0"/>
-        </linearGradient>
-        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="6" result="b"/>
+        <filter id="outer-glow" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2.6" result="b"/>
           <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
       </defs>
 
-      {/* Flask outline */}
+      {/* Neon silhouette glow (behind outline) */}
       <path
-        d="M82 18h28c3 0 6 3 6 6v44l62 98c13 21-2 48-26 48H66c-24 0-39-27-26-48l62-98V24c0-3 3-6 6-6z"
-        fill="#0a0a0a00"
-        stroke={stroke}
-        strokeWidth="10"
+        d="M22 6h10v16l15 23c3 5-1 11-7 11H18c-6 0-10-6-7-11l15-23V6z"
+        fill="none"
+        stroke="#01fcfc"
+        strokeWidth="4.5"
+        opacity="0.55"
+        filter="url(#outer-glow)"
+      />
+
+      {/* Flask outline (bright) */}
+      <path
+        d="M22 6h10v16l15 23c3 5-1 11-7 11H18c-6 0-10-6-7-11l15-23V6z"
+        fill="none"
+        stroke="#fff"
+        strokeWidth="3.2"
         strokeLinejoin="round"
       />
 
-      {/* Liquid (continuous area) — adjust 'tilt' by editing meniscus control points */}
+      {/* Liquid (continuous, tilted) */}
       <path
         d="
-          M58 160
-          C 100 138, 162 142, 196 156   /* meniscus curve (tilted) */
-          L 196 194
-          C 196 214, 182 228, 162 228
-          L 62 228
-          C 42 228, 28 214, 28 194
+          M13 43
+          C 26 36, 43 37, 52 41
+          L 52 50
+          C 52 55, 48 58, 43 58
+          L 19 58
+          C 14 58, 10 55, 10 50
           Z"
-        fill={`url(#${id})`}
-        filter="url(#glow)"
+        fill="url(#driplet-fill)"
       />
 
       {/* Meniscus highlight */}
       <path
-        d="M58 160 C 100 138, 162 142, 196 156"
-        stroke="white"
-        strokeOpacity="0.35"
-        strokeWidth="5"
-        strokeLinecap="round"
+        d="M13 43 C 26 36, 43 37, 52 41"
+        stroke="#ffffff"
+        strokeOpacity="0.7"
+        strokeWidth="2"
         fill="none"
-      />
-
-      {/* Inner glass highlight strip (semi-transparent overlay, NOT a gap) */}
-      <path
-        d="M94 52 L94 96 L42 178"
-        stroke={`url(#${hid})`}
-        strokeWidth="14"
         strokeLinecap="round"
-        fill="none"
       />
 
       {/* Bubbles */}
-      <circle cx="160" cy="176" r="8" fill="#fff" opacity="0.9"/>
-      <circle cx="178" cy="188" r="5" fill="#fff" opacity="0.8"/>
+      <circle cx="41" cy="45" r="2.4" fill="#fff" />
+      <circle cx="46" cy="48" r="1.6" fill="#fff" />
 
       {/* Drip */}
       <path
-        d="M122 236c0-10 8-18 18-18s18 8 18 18-8 18-18 18-18-8-18-18z"
-        fill={`url(#${id})`}
-        stroke={stroke}
-        strokeWidth="6"
+        d="M30 60a4 4 0 1 0 8 0a4 4 0 1 0-8 0"
+        fill="url(#driplet-fill)"
+        stroke="#fff"
+        strokeWidth="1.6"
       />
     </svg>
   );

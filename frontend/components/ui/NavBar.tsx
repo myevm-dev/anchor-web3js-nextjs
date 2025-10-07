@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { WalletButton } from "../WalletButton";
+import DripletFlaskMini from "../brand/DripletFlask";
 
 export function NavBar() {
   return (
@@ -10,19 +11,16 @@ export function NavBar() {
         <div className="h-14 flex items-center justify-between gap-4">
           {/* Left: brand */}
           <div className="flex items-center gap-2">
-            <Link href="/" className="text-white font-semibold tracking-wide">
-              Driplet.Fun
+            <Link href="/" className="flex items-center gap-2 text-white font-semibold tracking-wide">
+              <DripletFlaskMini size={30} className="shrink-0" />
+              <span>Driplet.Fun</span>
             </Link>
           </div>
 
           {/* Center: nav links */}
           <div className="hidden md:flex items-center gap-6 text-sm text-gray-300">
-            <Link href="/" className="hover:text-white">
-              Vaults
-            </Link>
-            <Link href="/about" className="hover:text-white">
-              About
-            </Link>
+            <Link href="/" className="hover:text-white">Vaults</Link>
+            <Link href="/about" className="hover:text-white">About</Link>
           </div>
 
           {/* Right: wallet */}
