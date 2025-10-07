@@ -123,131 +123,137 @@
 }
 
 
-/* === Thick Gradient Scrollbar (global) === */
-
-/* defaults (can be overridden via utility classes below) */
-:root {
-  --sb-size: 18px;                /* thickness */
-  --sb-radius: 999px;             /* fully rounded */
-  --sb-track: #0b0f14;            /* track bg (dark) */
-  --sb-border: rgba(255,255,255,.08);
-
-  /* Driplet.Fun gradient thumb */
-  --sb-thumb-grad: linear-gradient(180deg,#18E1FF 0%,#7B4DFF 50%,#FF55E0 100%);
-  --sb-thumb-solid: #7B4DFF;      /* Firefox uses a solid color; keep it on-brand */
+/* Native gradient scrollbar – WebKit browsers (Chrome/Edge/Opera/Safari) */
+:root{
+  --sb-size: 18px;
+  --sb-track: #0b0f14;
+  --sb-border: rgba(255,255,255,.10);
+  --sb-gap: #0b0f14;
+  --c1:#18E1FF; --c2:#7B4DFF; --c3:#FF55E0;
 }
 
-/* Firefox */
-html {
-  scrollbar-width: auto;                  /* fat */
-  scrollbar-color: var(--sb-thumb-solid) var(--sb-track);
-}
+html { scrollbar-gutter: stable; }                 /* avoid layout shift */
 
-/* WebKit (Chrome/Edge/Opera) */
+/* Firefox: gradients aren't supported; use a single color */
+html { scrollbar-width: auto; scrollbar-color: #7B4DFF var(--sb-track); }
+
+/* WebKit */
 @supports selector(::-webkit-scrollbar) {
-  *::-webkit-scrollbar {
-    width: var(--sb-size);
-    height: var(--sb-size);
-  }
-  *::-webkit-scrollbar-track {
+  ::-webkit-scrollbar { width: var(--sb-size); height: var(--sb-size); }
+  ::-webkit-scrollbar-track{
     background: var(--sb-track);
     border: 1px solid var(--sb-border);
-    border-radius: var(--sb-radius);
+    border-radius: 999px;
+    box-shadow: inset 0 0 40px rgba(0,0,0,.35);
   }
-  *::-webkit-scrollbar-thumb {
-    background: var(--sb-thumb-grad);
-    border: calc(var(--sb-size) / 3) solid var(--sb-track); /* gap effect */
-    border-radius: var(--sb-radius);
+  ::-webkit-scrollbar-thumb{
+    border: calc(var(--sb-size)/3) solid var(--sb-gap);
+    border-radius: 999px;
+    background: linear-gradient(180deg,var(--c1) 0%,var(--c2) 50%,var(--c3) 100%);
+    box-shadow: inset 0 0 50px rgba(0,0,0,.45), 0 0 8px rgba(114,147,255,.55);
   }
-  *:hover::-webkit-scrollbar-thumb { filter: brightness(1.05); }
-  *:active::-webkit-scrollbar-thumb { filter: brightness(0.95); }
+  ::-webkit-scrollbar-thumb:hover { filter: brightness(1.05); }
+  ::-webkit-scrollbar-thumb:active { filter: brightness(.95); }
 }
 
-/* Utilities: apply to any scrollable element */
-.scrollbar-fat   { --sb-size: 18px; }
-.scrollbar-thicc { --sb-size: 22px; }
-.scrollbar-slim  { --sb-size: 12px; }
 
-.scrollbar-hidden {
-  scrollbar-width: none;          /* Firefox */
+/* Optional size helpers */
+.scrollbar-fat  { --sb-size: 18px; }
+.scrollbar-thicc{ --sb-size: 22px; }
+.scrollbar-slim { --sb-size: 12px; }
+
+/* Scoped theme for wallet-adapter (only inside .wallet-button-theme) */
+.wallet-button-theme {
+  /* Button */
+  --wallet-adapter-button-height: 40px;
+  --wallet-adapter-button-padding: 0 16px;
+  --wallet-adapter-button-border-radius: 12px;
+
+  /* Colors – tuned to your scrollbar purple */
+  --wallet-adapter-button-background: #7b4dff;     /* NOTE: single # */
+  --wallet-adapter-button-hover-background: #8b5cf6;
+  --wallet-adapter-button-color: #ffffff;
+  --wallet-adapter-button-box-shadow: 0 6px 18px rgba(124, 58, 237, 0.35);
+
+  /* Modal styling (optional) */
+  --wallet-adapter-modal-border-radius: 16px;
+  --wallet-adapter-modal-background: #0b0d12;
+  --wallet-adapter-modal-overlay-background: rgba(0, 0, 0, 0.6);
+  --wallet-adapter-modal-color: #ffffff;
+  --wallet-adapter-modal-button-background: #111827;
+  --wallet-adapter-modal-button-hover-background: #1f2937;
+  --wallet-adapter-modal-button-border: 1px solid rgba(255,255,255,0.06);
+  --wallet-adapter-modal-search-input-background: #0f172a;
+  --wallet-adapter-modal-search-input-color: #e5e7eb;
 }
-.scrollbar-hidden::-webkit-scrollbar { display: none; } /* WebKit */
+/* Scope all wallet-adapter styles under your wrapper */
+.wallet-button-theme {
+  /* size knobs */
+  --wallet-adapter-button-height: 40px; /* change to taste */
+  --wallet-adapter-button-padding: 0 18px;
+}
 
+/* Size + centering */
+.wallet-button-theme .wallet-adapter-button-trigger {
+  min-width: 160px !important;           /* << width control */
+  height: var(--wallet-adapter-button-height) !important;
+  padding: var(--wallet-adapter-button-padding) !important;
 
-/* === Liquid Scrollbar (overlay) ===================================== */
-/* Colors from your .Fun gradient */
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  gap: 0 !important;                     /* remove stray spacing */
+}
+
+/* Keep the text from having extra margins in some versions */
+.wallet-button-theme .wallet-adapter-button-text {
+  margin: 0 !important;
+}
+
+/* Hide icons only while NOT connected (so copy/disconnect icons still show later) */
+.wallet-button-theme .wallet-adapter-button-trigger:not(.wallet-adapter-button-connected) .wallet-adapter-button-start-icon,
+.wallet-button-theme .wallet-adapter-button-trigger:not(.wallet-adapter-button-connected) .wallet-adapter-button-end-icon {
+  display: none !important;
+}
+
+/* BUT keep the loading spinner visible and centered when connecting */
+.wallet-button-theme .wallet-adapter-button-loading-icon {
+  display: inline-flex !important;
+  margin-right: 0 !important;
+}
+
+/* Native gradient scrollbar (Chromium/Safari). Firefox will stay solid. */
 :root{
-  --lsb-track: #0b0f14;
-  --lsb-border: rgba(255,255,255,.10);
-  --lsb-thumb-grad: linear-gradient(180deg,#18E1FF 0%,#7B4DFF 50%,#FF55E0 100%);
-  --lsb-thumb-glow: #7293ff; /* soft outer glow (matches CodePen vibe) */
+  --sb-size: 18px;
+  --sb-track: #0b0f14;
+  --sb-border: rgba(255,255,255,.10);
+  --sb-gap: #0b0f14;
+  --c1:#18E1FF; --c2:#7B4DFF; --c3:#FF55E0;
 }
 
-/* container (track) */
-.liquid-scrollbar{
-  position: relative;
-  width: 22px;               /* thickness */
-  height: calc(100vh - 116px); /* fits between top/bottom in layout */
-  background: var(--lsb-track);
-  border: 1px solid var(--lsb-border);
-  border-radius: 999px;
-  overflow: hidden;
-  box-shadow: inset 0 0 50px rgba(0,0,0,.35);
-}
+html { scrollbar-gutter: stable; }
 
-/* liquid fill */
-.liquid-fill{
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: var(--lsb-thumb-grad);
-  border-top-left-radius: 999px;
-  border-top-right-radius: 999px;
-  box-shadow:
-    inset 0 0 50px rgba(0,0,0,.55),
-    0 0 8px 0 var(--lsb-thumb-glow);
-  /* inner “liquid” swirl layer via pseudo-elements */
-}
-.liquid-fill::before,
-.liquid-fill::after{
-  content: "";
-  position: absolute;
-  width: 200%;
-  height: 200%;
-  top: -60px;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  border-radius: 45%;
-  opacity: .8;
-  pointer-events: none;
-}
+/* Firefox fallback (solid) */
+html { scrollbar-width: auto; scrollbar-color: #7B4DFF var(--sb-track); }
 
-.liquid-fill::after{
-  /* dark cap creating the wave edge and glow like the CodePen */
-  background: rgba(20,20,20,1);
-  box-shadow: 0 0 10px 5px var(--lsb-thumb-glow), inset 0 0 5px var(--lsb-thumb-glow);
-  animation: lsb-spin-a 5s linear infinite;
-  mix-blend-mode: soft-light;
+/* WebKit / Blink */
+@supports selector(::-webkit-scrollbar) {
+  ::-webkit-scrollbar { width: var(--sb-size); height: var(--sb-size); }
+  ::-webkit-scrollbar-track {
+    background: var(--sb-track);
+    border: 1px solid var(--sb-border);
+    border-radius: 999px;
+    box-shadow: inset 0 0 40px rgba(0,0,0,.35);
+  }
+  ::-webkit-scrollbar-thumb {
+    /* remove big border if you want more visible gradient; or keep it */
+    border: 6px solid var(--sb-gap);
+    border-radius: 999px;
+    background-image: linear-gradient(180deg, var(--c1) 0%, var(--c2) 50%, var(--c3) 100%);
+    background-clip: padding-box; /* keeps gradient inside the border */
+    box-shadow: inset 0 0 40px rgba(0,0,0,.35), 0 0 6px rgba(124, 58, 237, .5);
+  }
+  ::-webkit-scrollbar-thumb:hover  { filter: brightness(1.05); }
+  ::-webkit-scrollbar-thumb:active { filter: brightness(.95); }
 }
-
-.liquid-fill::before{
-  background: rgba(26,26,26,.5);
-  box-shadow: 0 0 10px rgba(26,26,26,.5), inset 0 0 5px rgba(26,26,26,.5);
-  border-radius: 40%;
-  animation: lsb-spin-b 7s linear infinite;
-  mix-blend-mode: overlay;
-}
-
-/* Animations (ported from your CodePen) */
-@keyframes lsb-spin-a{
-  0%   { transform: translate(-50%, -50%) rotate(0deg); }
-  100% { transform: translate(-50%, -50%) rotate(360deg); }
-}
-@keyframes lsb-spin-b{
-  0%   { transform: translate(-50%, -50%) rotate(0deg); }
-  100% { transform: translate(-50%, -50%) rotate(-360deg); }
-}
-
-/* Optional hover brighten */
-.liquid-scrollbar:hover .liquid-fill{ filter: brightness(1.05); }

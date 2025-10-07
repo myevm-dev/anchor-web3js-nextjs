@@ -1,16 +1,10 @@
 "use client";
 
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
+  Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
-
-import React from "react";
 import dynamic from "next/dynamic";
 
-// Nextjs hydration error fix
 const WalletMultiButton = dynamic(
   () =>
     import("@solana/wallet-adapter-react-ui").then(
@@ -18,28 +12,15 @@ const WalletMultiButton = dynamic(
     ),
   {
     ssr: false,
-    loading: () => {
-      return (
-        <div
-          className="bg-black border border-gray-800 rounded-md animate-pulse flex items-center"
-          style={{
-            width: "173.47px",
-            height: "48px",
-            padding: "0 12px",
-            gap: "8px",
-          }}
-        >
-          <div
-            className="rounded-full bg-purple-400/30"
-            style={{ width: "24px", height: "24px" }}
-          ></div>
-          <div
-            className="h-4 bg-white/10 rounded-sm"
-            style={{ width: "100px" }}
-          ></div>
-        </div>
-      );
-    },
+    loading: () => (
+      <div
+        className="rounded-lg flex items-center border border-white/10 bg-[rgb(124,58,237)]/25"
+        style={{ width: 173.47, height: 40, padding: "0 12px", gap: 8 }}
+      >
+        <div className="rounded-full" style={{ width: 24, height: 24, background: "linear-gradient(180deg, rgba(124,58,237,0.25) 0%, rgba(139,92,246,0.5) 100%)" }} />
+        <div className="h-4 rounded-sm" style={{ width: 100, background: "rgba(255,255,255,0.15)" }} />
+      </div>
+    ),
   }
 );
 
@@ -48,12 +29,16 @@ export function WalletButton() {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <div className="inline-block">
-            <WalletMultiButton />
+          {/* Scope all wallet-adapter CSS variables inside this wrapper */}
+          <div className="inline-block wallet-button-theme">
+            {/* label + medium width (between your two extremes) */}
+            <div className="inline-block wallet-button-theme">
+              <WalletMultiButton className="!rounded-lg">Sign In</WalletMultiButton>
+            </div>
           </div>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Devnet Only</p>
+          <p>Connect your wallet</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>

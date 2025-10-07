@@ -24,7 +24,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <GlobalSearchBar />
 
 
-
           <div className="pt-[120px]">
             {children}
             <Toaster
