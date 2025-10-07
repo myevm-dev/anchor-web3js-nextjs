@@ -6,7 +6,7 @@ import type { Metadata } from "next";
 import { SolanaProvider } from "@/components/counter/provider/Solana";
 import { Toaster } from "sonner";
 import { NavBar } from "@/components/ui/NavBar";
-import { GlobalSearchBar } from "@/components/ui/GlobalSearchBar"; // ⬅️ add
+import { GlobalSearchBar } from "@/components/ui/GlobalSearchBar"; 
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
