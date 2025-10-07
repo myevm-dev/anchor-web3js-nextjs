@@ -73,7 +73,7 @@ export function CreateVaultModal({ open, onOpenChange, onSubmit }: Props) {
 
   // Umi with same RPC (typed, no `any`)
   const umi = useMemo(() => {
-    const epHolder = connection as unknown as { rpcEndpoint?: string; _rpcEndpoint?: string };
+    const epHolder = connection as unknown as MaybeEndpoint;
     const endpoint = epHolder.rpcEndpoint ?? epHolder._rpcEndpoint ?? "https://api.mainnet-beta.solana.com";
     return createUmi(endpoint);
   }, [connection]);

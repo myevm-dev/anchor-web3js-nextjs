@@ -1,4 +1,3 @@
-// app/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -21,81 +20,108 @@ const MINTS = [
   "FQrNCk7HkXFEThzbtpdxqX5KaifLXAnPzseWXvksbonk",
 ];
 
-// simple demo numbers for rewards/TVL
+// demo numbers for rewards/TVL
 const DEMO_REWARDS = [1_000_000, 500_000, 750_000, 300_000];
-const DEMO_STAKED  = [250_000, 120_000, 80_000, 50_000];
+const DEMO_STAKED = [250_000, 120_000, 80_000, 50_000];
+
+// ---------- helpers to avoid `any` ----------
+type MaybeEndpoint = { rpcEndpoint?: string; _rpcEndpoint?: string };
+type UmiMeta =
+  | { data?: { name?: unknown; symbol?: unknown; uri?: unknown } }
+  | { name?: unknown; symbol?: unknown; uri?: unknown };
+type TokenMetaJson = { image?: string | null };
+
+const toStringSafe = (v: unknown): string =>
+  typeof v === "string"
+    ? v
+    : v instanceof Uint8Array
+    ? new TextDecoder().decode(v)
+    : "";
+
+// -------------------------------------------
 
 export default function Home() {
   const { connection } = useConnection();
   const [items, setItems] = useState<VaultSummary[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Umi with same RPC (typed)
   const umi = useMemo(() => {
-    const endpoint =
-      (connection as any)?.rpcEndpoint ||
-      (connection as any)?._rpcEndpoint ||
-      "https://api.mainnet-beta.solana.com";
+    const ep = connection as unknown as MaybeEndpoint;
+    const endpoint = ep.rpcEndpoint ?? ep._rpcEndpoint ?? "https://api.mainnet-beta.solana.com";
     return createUmi(endpoint);
   }, [connection]);
 
   useEffect(() => {
     let cancelled = false;
+
     (async () => {
       setLoading(true);
       try {
         const now = Math.floor(Date.now() / 1000);
 
         const results = await Promise.all(
-          MINTS.map(async (mint, i) => {
-            // pull metadata (name/symbol/image/decimals)
+          MINTS.map(async (mint, i): Promise<VaultSummary> => {
+            // defaults
             let name = "Unnamed";
             let symbol = "";
             let image: string | undefined = undefined;
-            let decimals: number | undefined = undefined;
+            const decimals: number | undefined = undefined; // demo list doesn't need decimals
 
+            // try to fetch name/symbol/image from Token Metadata
             try {
-              const meta = await fetchMetadataFromSeeds(umi, {
+              const meta = (await fetchMetadataFromSeeds(umi, {
                 mint: umiPk(new PublicKey(mint).toBase58()),
-              }).catch(() => null as any);
+              })) as unknown as UmiMeta | null;
 
               if (meta) {
-                const data: any = (meta as any).data ?? meta;
-                name = (data?.name ?? "").toString().replace(/\0/g, "").trim() || name;
-                symbol = (data?.symbol ?? "").toString().replace(/\0/g, "").trim();
-                const uri = (data?.uri ?? "").toString().replace(/\0/g, "").trim();
+                const container =
+                  "data" in meta && meta.data ? meta.data : (meta as Record<string, unknown>);
+
+                const rawName = toStringSafe(
+                  (container as Record<string, unknown>)["name"]
+                ).replace(/\0/g, "");
+                const rawSymbol = toStringSafe(
+                  (container as Record<string, unknown>)["symbol"]
+                ).replace(/\0/g, "");
+                const uri = toStringSafe(
+                  (container as Record<string, unknown>)["uri"]
+                ).replace(/\0/g, "");
+
+                if (rawName.trim()) name = rawName.trim();
+                symbol = rawSymbol.trim();
+
                 if (uri) {
-                  const j = await fetch(uri).then((r) => r.json()).catch(() => null as any);
+                  const j = (await fetch(uri)
+                    .then((r) => r.json() as Promise<TokenMetaJson>)
+                    .catch(() => null)) as TokenMetaJson | null;
                   if (j?.image) image = j.image;
                 }
               }
-            } catch (_) {}
-
-            // we don’t need on-chain decimals here for demo APR/emission math,
-            // but try to fetch if available via Umi metadata; leave undefined otherwise.
-            // (Your modal already fetches exact decimals when creating a vault.)
+            } catch {
+              // ignore demo metadata failures
+            }
 
             const rewardNet = DEMO_REWARDS[i % DEMO_REWARDS.length];
             const totalStaked = DEMO_STAKED[i % DEMO_STAKED.length];
             const emissionPerSec = rewardNet / TERM_SECS;
 
-            // very rough demo APR: (rewards/TVL) over 6 months, annualized
             const apr =
               totalStaked > 0 ? (rewardNet / totalStaked) * (365 / 182) : null;
 
-            const v: VaultSummary = {
+            return {
               mint,
               name,
               symbol,
               image,
               decimals,
-              startTime: now - 3600,                     // already live
-              endTime: now + TERM_SECS,                  // ends in 6 months
+              startTime: now - 3600,
+              endTime: now + TERM_SECS,
               rewardNet,
               totalStaked,
               emissionPerSec,
               apr,
             };
-            return v;
           })
         );
 
@@ -104,32 +130,31 @@ export default function Home() {
         if (!cancelled) setLoading(false);
       }
     })();
-    return () => { cancelled = true; };
+
+    return () => {
+      cancelled = true;
+    };
   }, [umi]);
 
   return (
     <div className="relative min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-black">
-      {/* subtle background grid */}
       <div className="pointer-events-none absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-10 [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]" />
+      <main className="relative z-10 mx-auto max-w-7xl px-4 pt-0 pb-16">
+        <header className="mt-4 md:mt-6 mb-4">
+          <h1 className="text-3xl md:text-4xl font-semibold text-[#1DBAFC]">
+            Discover Vaults
+          </h1>
+          <p className="mt-1 text-gray-300">
+            Stake tokens and earn rewards by the second.
+          </p>
+        </header>
 
-      {/* content — no extra top padding here; layout already adds pt-[104px] */}
-
-<main className="relative z-10 mx-auto max-w-7xl px-4 pt-0 pb-16">
-  <header className="mt-4 md:mt-6 mb-4">
-    <h1 className="text-3xl md:text-4xl font-semibold text-[#1DBAFC]">
-      Discover Vaults
-    </h1>
-    <p className="mt-1 text-gray-300">
-      Stake tokens and earn rewards by the second.
-    </p>
-  </header>
-
-  <VaultGrid
-    items={items}
-    className="mt-4"
-    emptyText={loading ? "Loading vaults…" : "No vaults found"}
-  />
-</main>
+        <VaultGrid
+          items={items}
+          className="mt-4"
+          emptyText={loading ? "Loading vaults…" : "No vaults found"}
+        />
+      </main>
     </div>
   );
 }
