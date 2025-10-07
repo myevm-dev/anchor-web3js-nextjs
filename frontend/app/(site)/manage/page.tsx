@@ -1,21 +1,30 @@
-// app/manage/page.tsx
+"use client";
+
 import Link from "next/link";
+import ManageVaultCard, { ManageVault } from "../../../components/ui/ManageVaultCard";
 
 export default function ManagePage() {
+  const placeholder: ManageVault = {
+    mint: "J2eaKn35rp82T6RFEsNK9CLRHEKV9BLXjedFM3q6pump",
+    name: "Feed The People",
+    symbol: "FTP",
+    status: "active",
+    startTime: Math.floor(Date.now() / 1000) - 3600,
+    endTime: Math.floor(Date.now() / 1000) + 182 * 24 * 60 * 60,
+    rewardNet: 1_000_000,
+    totalStaked: 250_000,
+  };
+
   return (
     <div className="relative min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-black">
-      {/* subtle background grid */}
       <div className="pointer-events-none absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-10 [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]" />
 
       <main className="relative z-10 mx-auto max-w-7xl px-4 pt-0 pb-16">
-        {/* Header */}
         <header className="mb-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl md:text-4xl font-semibold text-white">Manage Vaults</h1>
-              <p className="mt-1 text-gray-300">
-                View, filter, and manage your created vaults.
-              </p>
+              <p className="mt-1 text-gray-300">View, filter, and manage your created vaults.</p>
             </div>
 
             <Link
@@ -27,7 +36,7 @@ export default function ManagePage() {
           </div>
         </header>
 
-        {/* Filters (placeholder only) */}
+        {/* Filters (placeholder) */}
         <section className="rounded-lg border border-white/10 bg-white/5 p-4">
           <form className="grid gap-3 md:grid-cols-3">
             <div className="flex flex-col gap-1">
@@ -61,14 +70,15 @@ export default function ManagePage() {
           </form>
         </section>
 
-        {/* Results placeholder */}
+        {/* Results */}
         <section className="mt-6">
-          <div className="rounded-lg border border-dashed border-white/10 bg-white/5 p-8 text-center text-sm text-gray-400">
-            No vaults yet. Use the filters above or{" "}
-            <Link href="/create" className="underline underline-offset-4 hover:opacity-90">
-              create a new vault
-            </Link>
-            .
+          <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+            <ManageVaultCard
+              v={placeholder}
+              onOpen={(mint: string) => console.log("open", mint)}
+              onPause={(mint: string) => console.log("pause", mint)}
+              onEnd={(mint: string) => console.log("end", mint)}
+            />
           </div>
         </section>
       </main>

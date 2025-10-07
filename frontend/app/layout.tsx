@@ -1,12 +1,11 @@
 import "./globals.css";
 import "@solana/wallet-adapter-react-ui/styles.css";
-
 import { Geist, Geist_Mono } from "next/font/google";
 import type { Metadata } from "next";
 import { SolanaProvider } from "@/components/counter/provider/Solana";
 import { Toaster } from "sonner";
 import { NavBar } from "@/components/ui/NavBar";
-import { GlobalSearchBar } from "@/components/ui/GlobalSearchBar"; 
+import { GlobalSearchBar } from "@/components/ui/GlobalSearchBar";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -23,7 +22,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <SolanaProvider>
           <NavBar />
           <GlobalSearchBar />
-          {/* Offset for fixed NavBar (h-14) + SearchBar (h-12) */}
+
+
+
           <div className="pt-[120px]">
             {children}
             <Toaster

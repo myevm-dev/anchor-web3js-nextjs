@@ -121,3 +121,133 @@
     @apply bg-background text-foreground;
   }
 }
+
+
+/* === Thick Gradient Scrollbar (global) === */
+
+/* defaults (can be overridden via utility classes below) */
+:root {
+  --sb-size: 18px;                /* thickness */
+  --sb-radius: 999px;             /* fully rounded */
+  --sb-track: #0b0f14;            /* track bg (dark) */
+  --sb-border: rgba(255,255,255,.08);
+
+  /* Driplet.Fun gradient thumb */
+  --sb-thumb-grad: linear-gradient(180deg,#18E1FF 0%,#7B4DFF 50%,#FF55E0 100%);
+  --sb-thumb-solid: #7B4DFF;      /* Firefox uses a solid color; keep it on-brand */
+}
+
+/* Firefox */
+html {
+  scrollbar-width: auto;                  /* fat */
+  scrollbar-color: var(--sb-thumb-solid) var(--sb-track);
+}
+
+/* WebKit (Chrome/Edge/Opera) */
+@supports selector(::-webkit-scrollbar) {
+  *::-webkit-scrollbar {
+    width: var(--sb-size);
+    height: var(--sb-size);
+  }
+  *::-webkit-scrollbar-track {
+    background: var(--sb-track);
+    border: 1px solid var(--sb-border);
+    border-radius: var(--sb-radius);
+  }
+  *::-webkit-scrollbar-thumb {
+    background: var(--sb-thumb-grad);
+    border: calc(var(--sb-size) / 3) solid var(--sb-track); /* gap effect */
+    border-radius: var(--sb-radius);
+  }
+  *:hover::-webkit-scrollbar-thumb { filter: brightness(1.05); }
+  *:active::-webkit-scrollbar-thumb { filter: brightness(0.95); }
+}
+
+/* Utilities: apply to any scrollable element */
+.scrollbar-fat   { --sb-size: 18px; }
+.scrollbar-thicc { --sb-size: 22px; }
+.scrollbar-slim  { --sb-size: 12px; }
+
+.scrollbar-hidden {
+  scrollbar-width: none;          /* Firefox */
+}
+.scrollbar-hidden::-webkit-scrollbar { display: none; } /* WebKit */
+
+
+/* === Liquid Scrollbar (overlay) ===================================== */
+/* Colors from your .Fun gradient */
+:root{
+  --lsb-track: #0b0f14;
+  --lsb-border: rgba(255,255,255,.10);
+  --lsb-thumb-grad: linear-gradient(180deg,#18E1FF 0%,#7B4DFF 50%,#FF55E0 100%);
+  --lsb-thumb-glow: #7293ff; /* soft outer glow (matches CodePen vibe) */
+}
+
+/* container (track) */
+.liquid-scrollbar{
+  position: relative;
+  width: 22px;               /* thickness */
+  height: calc(100vh - 116px); /* fits between top/bottom in layout */
+  background: var(--lsb-track);
+  border: 1px solid var(--lsb-border);
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: inset 0 0 50px rgba(0,0,0,.35);
+}
+
+/* liquid fill */
+.liquid-fill{
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: var(--lsb-thumb-grad);
+  border-top-left-radius: 999px;
+  border-top-right-radius: 999px;
+  box-shadow:
+    inset 0 0 50px rgba(0,0,0,.55),
+    0 0 8px 0 var(--lsb-thumb-glow);
+  /* inner “liquid” swirl layer via pseudo-elements */
+}
+.liquid-fill::before,
+.liquid-fill::after{
+  content: "";
+  position: absolute;
+  width: 200%;
+  height: 200%;
+  top: -60px;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 45%;
+  opacity: .8;
+  pointer-events: none;
+}
+
+.liquid-fill::after{
+  /* dark cap creating the wave edge and glow like the CodePen */
+  background: rgba(20,20,20,1);
+  box-shadow: 0 0 10px 5px var(--lsb-thumb-glow), inset 0 0 5px var(--lsb-thumb-glow);
+  animation: lsb-spin-a 5s linear infinite;
+  mix-blend-mode: soft-light;
+}
+
+.liquid-fill::before{
+  background: rgba(26,26,26,.5);
+  box-shadow: 0 0 10px rgba(26,26,26,.5), inset 0 0 5px rgba(26,26,26,.5);
+  border-radius: 40%;
+  animation: lsb-spin-b 7s linear infinite;
+  mix-blend-mode: overlay;
+}
+
+/* Animations (ported from your CodePen) */
+@keyframes lsb-spin-a{
+  0%   { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+@keyframes lsb-spin-b{
+  0%   { transform: translate(-50%, -50%) rotate(0deg); }
+  100% { transform: translate(-50%, -50%) rotate(-360deg); }
+}
+
+/* Optional hover brighten */
+.liquid-scrollbar:hover .liquid-fill{ filter: brightness(1.05); }
