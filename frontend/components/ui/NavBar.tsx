@@ -58,7 +58,7 @@ export function NavBar() {
           </div>
 
           {/* Center: nav links */}
-          <div className="hidden md:flex items-center gap-6 text-sm">
+          <div className="hidden md:flex items-center gap-6 text-lg">
             <NavItem href="/" exact>Vaults</NavItem>
             <NavItem href="/manage">Manage</NavItem>
             <NavItem href="/about">About</NavItem>

@@ -116,9 +116,11 @@ export default function Home() {
 
 <main className="relative z-10 mx-auto max-w-7xl px-4 pt-0 pb-16">
   <header className="mt-4 md:mt-6 mb-4">
-    <h1 className="text-3xl md:text-4xl font-semibold text-white">Discover Vaults</h1>
+    <h1 className="text-3xl md:text-4xl font-semibold text-[#1DBAFC]">
+      Discover Vaults
+    </h1>
     <p className="mt-1 text-gray-300">
-      Stake creator tokens and earn streaming rewards.
+      Stake tokens and earn streaming rewards.
     </p>
   </header>
 

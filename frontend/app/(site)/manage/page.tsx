@@ -23,7 +23,9 @@ export default function ManagePage() {
         <header className="mb-6">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl md:text-4xl font-semibold text-white">Manage Vaults</h1>
+                <h1 className="text-3xl md:text-4xl font-semibold text-[#1DBAFC]">
+                  Manage Vaults
+                </h1>
               <p className="mt-1 text-gray-300">View, filter, and manage your created vaults.</p>
             </div>
 
