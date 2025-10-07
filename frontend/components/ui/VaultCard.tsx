@@ -113,7 +113,8 @@ export default function VaultCard({
         {/* status pill with black backdrop */}
 {/* status pill with solid black backdrop */}
 <div className="absolute left-2 top-2 z-10">
-  <div className="rounded-md bg-black p-0.5">
+  <div className="rounded-md bg-black p-0.5 ring-1 ring-black/70">
+
     <div
       className={`px-2 py-0.5 rounded text-[11px] font-medium border
         ${
