@@ -41,16 +41,21 @@ export function CreateVaultModal({ open, onOpenChange, onSubmit }: Props) {
   const feeTokens   = useMemo(() => (rewardNum * FEE_BPS) / 10_000, [rewardNum]);
   const grossTokens = useMemo(() => rewardNum + feeTokens, [rewardNum, feeTokens]);
   const perSecond   = useMemo(() => (rewardNum > 0 ? rewardNum / TERM_SECS : 0), [rewardNum]);
-  const perDay      = useMemo(() => perSecond * 86_400, [perSecond]); // NEW: per-day rate
+  const perDay      = useMemo(() => perSecond * 86_400, [perSecond]); // per-day rate
   const disabled    = !mintStr.trim() || rewardNum <= 0 || loadingMeta;
+// validate PK (move this ABOVE isPumpFun)
+const validMintPk = useMemo(() => {
+  try { return mintStr ? new PublicKey(mintStr) : null; } catch { return null; }
+}, [mintStr]);
 
+// pump.fun mint? (no PK needed)
+const isPumpFun = useMemo(() => {
+  const s = mintStr.trim().toLowerCase();
+  return s.endsWith("pump"); // e.g. ...Amgeppump
+}, [mintStr]);
   const format = (n: number) =>
     n.toLocaleString(undefined, { maximumFractionDigits: 6 });
 
-  // validate PK
-  const validMintPk = useMemo(() => {
-    try { return mintStr ? new PublicKey(mintStr) : null; } catch { return null; }
-  }, [mintStr]);
 
   // Umi client with same RPC as wallet-adapter connection
   const umi = useMemo(() => {
@@ -166,15 +171,49 @@ export function CreateVaultModal({ open, onOpenChange, onSubmit }: Props) {
               )}
 
               <div className="min-w-0 flex-1">
-                <div className="text-base md:text-lg font-semibold text-white truncate">
-                  {tokenName || "Unnamed"}
-                  {tokenSymbol ? ` • ${tokenSymbol}` : ""}
-                  {decimals != null ? ` • ${decimals} decimals` : ""}
-                </div>
-                <div className="mt-1 text-xs text-gray-400 break-all">
-                  {validMintPk?.toBase58()}
-                </div>
-              </div>
+  {/* Name */}
+  <div className="text-base md:text-lg font-semibold text-white truncate">
+    {tokenName || "Unnamed"}
+  </div>
+
+  {/* Symbol (line 2) with optional Pump.fun badge */}
+{(tokenSymbol || isPumpFun) && (
+  <div className="text-sm text-gray-300 flex items-center gap-2">
+    {isPumpFun && (
+      // from public/images/pumplogo.webp
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src="/images/pumplogo.webp"
+        alt="pump.fun"
+        className="h-4 w-4 rounded-sm"
+        aria-hidden="true"
+      />
+    )}
+    <span>{tokenSymbol || "Pump.fun token"}</span>
+  </div>
+)}
+
+  {/* Decimals (line 3) */}
+  {decimals != null && (
+    <div className="text-sm text-gray-300">{decimals} decimals</div>
+  )}
+
+  {/* Explorer link (Solana green) */}
+{/* Explorer link — mainnet only, Solana green, no underline */}
+{validMintPk && (
+  <a
+    href={`https://explorer.solana.com/address/${validMintPk.toBase58()}`}
+    target="_blank"
+    rel="noopener noreferrer"
+    className="mt-1 block text-xs break-all focus:outline-none focus:ring-1 focus:ring-[#14F195]/50"
+    style={{ color: "#14F195", textDecoration: "none" }}
+  >
+    {validMintPk.toBase58()}
+  </a>
+)}
+
+</div>
+
             </div>
           )}
           <label className="text-sm text-gray-300">Token Mint Address</label>
@@ -191,8 +230,8 @@ export function CreateVaultModal({ open, onOpenChange, onSubmit }: Props) {
           </div>
         </div>
 
-        {/* total rewards */}
-        <div className="mt-4">
+        {/* total rewards — tightened spacing (mt-2) to group with mint input */}
+        <div className="mt-0">
           <label className="text-sm text-gray-300">
             Total Rewards to Distribute (over 6 months)
           </label>
@@ -205,39 +244,39 @@ export function CreateVaultModal({ open, onOpenChange, onSubmit }: Props) {
           />
         </div>
 
-{/* summary */}
-<div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-  {/* Protocol Fee */}
-  <div className="rounded-md border border-white/10 p-3 bg-white/5">
-    <div className="text-gray-400">Protocol Fee</div>
-    <div className="mt-1 font-medium">
-      {FEE_BPS / 100}% of rewards + {CREATION_FEE_SOL} SOL
-    </div>
-  </div>
+        {/* summary — pushed lower (mt-6) to separate from inputs */}
+        <div className="mt-10 grid grid-cols-2 gap-3 text-sm">
+          {/* Protocol Fee */}
+          <div className="rounded-md border border-white/10 p-3 bg-white/5">
+            <div className="text-gray-400">Protocol Fee</div>
+            <div className="mt-1 font-medium">
+              {FEE_BPS / 100}% of rewards + {CREATION_FEE_SOL} SOL
+            </div>
+          </div>
 
-  {/* You Must Provide */}
-  <div className="rounded-md border border-white/10 p-3 bg-white/5">
-    <div className="text-gray-400">You Must Provide</div>
-    <div className="mt-1 font-medium">
-      {rewardNum > 0 ? `${format(grossTokens)} tokens` : "—"}
-    </div>
-  </div>
+          {/* You Must Provide */}
+          <div className="rounded-md border border-white/10 p-3 bg-white/5">
+            <div className="text-gray-400">You Must Provide</div>
+            <div className="mt-1 font-medium">
+              {rewardNum > 0 ? `${format(grossTokens)} tokens` : "—"}
+            </div>
+          </div>
 
-  {/* Emission (two lines) */}
-  <div className="rounded-md border border-white/10 p-3 bg-white/5 col-span-2">
-    <div className="text-gray-400">Emission</div>
-    <div className="mt-1 font-medium">
-      {rewardNum > 0 ? (
-        <>
-          <div>{format(perSecond)} tokens/s</div>
-          <div className="text-gray-300">{format(perDay)} tokens/day</div>
-        </>
-      ) : (
-        "—"
-      )}
-    </div>
-  </div>
-</div>
+          {/* Emission (two lines) */}
+          <div className="rounded-md border border-white/10 p-3 bg-white/5 col-span-2">
+            <div className="text-gray-400">Emission</div>
+            <div className="mt-1 font-medium">
+              {rewardNum > 0 ? (
+                <>
+                  <div>{format(perSecond)} tokens/s</div>
+                  <div className="text-gray-300">{format(perDay)} tokens/day</div>
+                </>
+              ) : (
+                "—"
+              )}
+            </div>
+          </div>
+        </div>
 
         {/* footer */}
         <div className="mt-5 flex justify-end gap-3">
