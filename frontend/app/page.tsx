@@ -112,20 +112,21 @@ export default function Home() {
       <div className="pointer-events-none absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-10 [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]" />
 
       {/* content — no extra top padding here; layout already adds pt-[104px] */}
-      <main className="relative z-10 mx-auto max-w-7xl px-4 pt-0 pb-16">
-        <header className="mb-4">
-          <h1 className="text-3xl md:text-4xl font-semibold text-white">Discover Vaults</h1>
-          <p className="mt-1 text-gray-300">
-            Stake creator tokens and earn streaming rewards.
-          </p>
-        </header>
 
-        <VaultGrid
-          items={items}
-          className="mt-4"
-          emptyText={loading ? "Loading vaults…" : "No vaults found"}
-        />
-      </main>
+<main className="relative z-10 mx-auto max-w-7xl px-4 pt-0 pb-16">
+  <header className="mt-4 md:mt-6 mb-4">
+    <h1 className="text-3xl md:text-4xl font-semibold text-white">Discover Vaults</h1>
+    <p className="mt-1 text-gray-300">
+      Stake creator tokens and earn streaming rewards.
+    </p>
+  </header>
+
+  <VaultGrid
+    items={items}
+    className="mt-4"
+    emptyText={loading ? "Loading vaults…" : "No vaults found"}
+  />
+</main>
     </div>
   );
 }

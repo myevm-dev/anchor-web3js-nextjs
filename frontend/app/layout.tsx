@@ -24,7 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <NavBar />
           <GlobalSearchBar />
           {/* Offset for fixed NavBar (h-14) + SearchBar (h-12) */}
-          <div className="pt-[104px]">
+          <div className="pt-[120px]">
             {children}
             <Toaster
               position="bottom-right"
