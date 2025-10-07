@@ -120,7 +120,7 @@ export default function Home() {
       Discover Vaults
     </h1>
     <p className="mt-1 text-gray-300">
-      Stake tokens and earn streaming rewards.
+      Stake tokens and earn rewards by the second.
     </p>
   </header>
 

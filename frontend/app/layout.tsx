@@ -1,11 +1,15 @@
+// app/layout.tsx
 import "./globals.css";
 import "@solana/wallet-adapter-react-ui/styles.css";
-import { Geist, Geist_Mono } from "next/font/google";
+
 import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
+
 import { SolanaProvider } from "@/components/counter/provider/Solana";
-import { Toaster } from "sonner";
 import { NavBar } from "@/components/ui/NavBar";
 import { GlobalSearchBar } from "@/components/ui/GlobalSearchBar";
+import { DemoBanner } from "@/components/ui/DemoBanner";
+import { Toaster } from "sonner";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -17,23 +21,18 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="en"
-      className="dark overscroll-none"                    // prevent elastic-overscroll on iOS
-    >
-      <body
-        className={`
-          ${geistSans.variable} ${geistMono.variable}
-          antialiased bg-gray-950 text-white
-          overflow-x-hidden overscroll-none touch-pan-y    // no sideways drag, sane vertical pan
-        `}
-      >
+    <html lang="en" className="dark overscroll-none">
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-950 text-white`}>
         <SolanaProvider>
+          {/* fixed header pieces */}
           <NavBar />
           <GlobalSearchBar />
 
-          {/* Reserve space for top nav and bottom mobile tabs */}
+          {/* everything below is offset from the fixed header */}
           <div className="pt-[120px] pb-20 md:pb-0">
+            {/* banner sits directly under the search bar */}
+            <DemoBanner />
+
             {children}
 
             <Toaster
