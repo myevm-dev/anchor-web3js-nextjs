@@ -1,0 +1,13 @@
+[package]
+name = "pump_vaults"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "pump_vaults"
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+anchor-lang = "0.30.1"
+anchor-spl = { version = "0.30.1", features = ["associated-token", "token"] }
+solana-program = "1.18.25"

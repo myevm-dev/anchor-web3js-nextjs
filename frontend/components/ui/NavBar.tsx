@@ -11,14 +11,18 @@ export function NavBar() {
           {/* Left: brand */}
           <div className="flex items-center gap-2">
             <Link href="/" className="text-white font-semibold tracking-wide">
-              Solana dApp
+              Driplet.Fun
             </Link>
           </div>
 
-          {/* Center: (optional) nav links */}
+          {/* Center: nav links */}
           <div className="hidden md:flex items-center gap-6 text-sm text-gray-300">
-            {/* <Link href="/about" className="hover:text-white">About</Link> */}
-            {/* <Link href="/docs" className="hover:text-white">Docs</Link> */}
+            <Link href="/" className="hover:text-white">
+              Vaults
+            </Link>
+            <Link href="/about" className="hover:text-white">
+              About
+            </Link>
           </div>
 
           {/* Right: wallet */}
