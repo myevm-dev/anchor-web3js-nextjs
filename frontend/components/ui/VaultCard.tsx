@@ -2,13 +2,14 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useMemo } from "react";
 
 export type VaultSummary = {
   // token / display
   mint: string;                 // SPL mint
   name: string;
   symbol?: string;
-  image?: string;               // logo URL
+  image?: string;               // logo URL (may be ipfs:// or gateway)
   decimals?: number;
 
   // vault config/state
@@ -18,9 +19,10 @@ export type VaultSummary = {
   rewardNet?: number;           // tokens to distribute (net of fee)
   totalStaked?: number;         // tokens currently staked
   emissionPerSec?: number;      // tokens/sec (net)
-  apr?: number | null;          // optional precomputed APR (e.g., 0.42 means 42%)
+  apr?: number | null;          // e.g. 0.42 => 42%
 };
 
+/** Format helpers */
 function format(n?: number, maxFrac = 6) {
   if (n == null || !isFinite(n)) return "—";
   return n.toLocaleString(undefined, { maximumFractionDigits: maxFrac });
@@ -31,6 +33,43 @@ function pct(n?: number) {
 }
 function shortAddr(a: string) {
   return a.length > 12 ? `${a.slice(0, 4)}…${a.slice(-4)}` : a;
+}
+
+/** Normalize IPFS/Arweave/Shadow links to a browser-friendly URL */
+function normalizeImageUrl(u?: string): string | undefined {
+  if (!u) return undefined;
+
+  // ipfs://CID[/path]
+  if (u.startsWith("ipfs://")) {
+    const path = u.replace("ipfs://", "");
+    return `https://ipfs.io/ipfs/${path}`;
+  }
+
+  try {
+    const url = new URL(u);
+
+    // Cloudflare / Pinata -> ipfs.io (optional, just to keep consistent)
+    if (
+      url.hostname === "cloudflare-ipfs.com" ||
+      url.hostname === "gateway.pinata.cloud"
+    ) {
+      return `https://ipfs.io${url.pathname}`;
+    }
+
+    // nftstorage.link often uses subdomain gateways like <cid>.ipfs.nftstorage.link/…
+    if (url.hostname.endsWith(".nftstorage.link")) {
+      // Convert https://<cid>.ipfs.nftstorage.link/<path> -> https://ipfs.io/ipfs/<cid>/<path>
+      const cid = url.hostname.split(".")[0];
+      const path = url.pathname.replace(/^\/+/, "");
+      return `https://ipfs.io/ipfs/${cid}/${path}`;
+    }
+
+    // already arweave / shdw / ipfs.io: leave as-is
+    return url.toString();
+  } catch {
+    // Not a valid URL, return as-is
+    return u;
+  }
 }
 
 export default function VaultCard({
@@ -47,6 +86,8 @@ export default function VaultCard({
   const isPumpFun = v.mint.toLowerCase().endsWith("pump");
   const perDay = (v.emissionPerSec ?? 0) * 86400;
 
+  const imgSrc = useMemo(() => normalizeImageUrl(v.image), [v.image]);
+
   return (
     <div
       onClick={onClick}
@@ -54,25 +95,40 @@ export default function VaultCard({
     >
       {/* image */}
       <div className="relative aspect-[16/9] bg-white/5">
-        {v.image ? (
-          <Image src={v.image} alt={v.symbol || v.name} fill className="object-cover" />
+        {imgSrc ? (
+          <Image
+            src={imgSrc}
+            alt={v.symbol || v.name}
+            fill
+            className="object-cover"
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+            unoptimized
+            priority={false}
+          />
         ) : (
           <div className="absolute inset-0 grid place-items-center text-sm text-gray-400">
             No image
           </div>
         )}
-        {/* status pill */}
-        <div
-          className={`absolute left-2 top-2 px-2 py-0.5 rounded text-[11px] font-medium ${
-            status === "active"
-              ? "bg-emerald-500/15 text-emerald-300 border border-emerald-500/30"
-              : status === "upcoming"
-              ? "bg-amber-500/15 text-amber-300 border border-amber-500/30"
-              : "bg-gray-500/15 text-gray-300 border border-gray-500/30"
-          }`}
-        >
-          {status}
-        </div>
+        {/* status pill with black backdrop */}
+{/* status pill with solid black backdrop */}
+<div className="absolute left-2 top-2 z-10">
+  <div className="rounded-md bg-black p-0.5">
+    <div
+      className={`px-2 py-0.5 rounded text-[11px] font-medium border
+        ${
+          status === "active"
+            ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+            : status === "upcoming"
+            ? "bg-amber-500/15 text-amber-300 border-amber-500/30"
+            : "bg-gray-500/15 text-gray-300 border-gray-500/30"
+        }`}
+    >
+      {status}
+    </div>
+  </div>
+</div>
+
       </div>
 
       {/* body */}
