@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { WalletButton } from "../WalletButton";
-import { Home, Settings2, Info } from "lucide-react"; // CandlestickChart removed (Trade disabled)
+import { Home, Settings2, Info, Radar } from "lucide-react"; // added Radar for Retro
 
 function TopLink({
   href,
@@ -71,13 +71,14 @@ export function NavBar() {
 
             {/* center links (desktop only) */}
             <div className="hidden md:flex items-center gap-6 text-lg">
+              <TopLink href="/retro" exact>Retro</TopLink>
               <TopLink href="/" exact>Vaults</TopLink>
               {/* <TopLink href="/trade">Trade</TopLink>  // TEMP disabled */}
               <TopLink href="/manage">Manage</TopLink>
               <TopLink href="/about">About</TopLink>
             </div>
 
-            {/* RIGHT: wallet (desktop normal, mobile compact) */}
+            {/* RIGHT: wallet */}
             <div className={`flex items-center ${BTN_H}`}>
               <div className="hidden sm:block wallet-button-theme">
                 <WalletButton />
@@ -96,9 +97,10 @@ export function NavBar() {
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <div className="mx-auto max-w-7xl px-2">
-          <div className="grid grid-cols-3">{/* was 4 when Trade was enabled */}
+          <div className="grid grid-cols-4">
+            <MobileLink href="/retro" label="Retro" Icon={Radar} exact />
             <MobileLink href="/" label="Vaults" Icon={Home} exact />
-            {/* <MobileLink href="/trade" label="Trade" Icon={CandlestickChart} />  // TEMP disabled */}
+            {/* <MobileLink href="/trade" label="Trade" Icon={CandlestickChart} /> */}
             <MobileLink href="/manage" label="Manage" Icon={Settings2} />
             <MobileLink href="/about" label="About" Icon={Info} />
           </div>
