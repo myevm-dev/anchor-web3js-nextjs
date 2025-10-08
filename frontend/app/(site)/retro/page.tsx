@@ -9,11 +9,11 @@ const TOKEN_PROGRAM_ID = new PublicKey(
   "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 );
 const RENT_PER_ATA_SOL = 0.002; // display approximation
-const FEE_BPS = 1000; // 10
+const FEE_BPS = 1000; // 10%
 const RPC =
   process.env.NEXT_PUBLIC_SOLANA_RPC ?? "https://api.mainnet-beta.solana.com";
 
-/* ---------- small helpers ---------- */
+/* ---------- helpers ---------- */
 
 // minimal retry with exponential backoff + jitter (for 429s)
 async function withBackoff<T>(fn: () => Promise<T>, tries = 4): Promise<T> {
@@ -33,15 +33,9 @@ async function withBackoff<T>(fn: () => Promise<T>, tries = 4): Promise<T> {
   }
 }
 
-/**
- * Return true if the 8-byte u64 at `offset` is all zeros.
- * SPL Token Account layout stores amount u64 at offset 64.
- * We avoid BigInt entirely to support lower TS targets.
- */
+/** Return true if the 8-byte u64 at `offset` is all zeros (no BigInt needed). */
 function isU64Zero(buf: Uint8Array, offset: number): boolean {
-  for (let i = 0; i < 8; i++) {
-    if (buf[offset + i] !== 0) return false;
-  }
+  for (let i = 0; i < 8; i++) if (buf[offset + i] !== 0) return false;
   return true;
 }
 
@@ -80,7 +74,7 @@ export default function RetroPage() {
 
       const connection = new Connection(RPC, { commitment: "processed" });
 
-      // Low-CU call (unparsed)
+      // Low-CU (unparsed)
       const res = await withBackoff(() =>
         connection.getTokenAccountsByOwner(owner, { programId: TOKEN_PROGRAM_ID })
       );
@@ -120,61 +114,73 @@ export default function RetroPage() {
 
       <main className="relative z-10 mx-auto max-w-6xl px-4 pt-0 pb-16">
         {/* TOP: Centered hero + collapsible steps */}
-<section className="mt-4">  {/* was mt-8 -> less space above the card */}
-  <Card className="px-6 pt-5 pb-4 sm:px-10 sm:pt-6 sm:pb-5"> {/* tighter padding */}
-    <div className="text-center">
-      <div className="text-3xl text-cyan-300/90 font-medium tracking-wide mt-0"> {/* no extra top margin */}
-        RETRO
-      </div>
-      <h1 className="mt-1 text-3xl sm:text-4xl font-semibold text-white"> {/* was mt-2 */}
-        Scan & reclaim your locked SOL
-      </h1>
-      <p className="mx-auto mt-2 max-w-3xl text-[#DDA0DD]"> {/* was mt-3 */}
-        We search your wallet for empty token accounts (ATAs) and other closeable accounts,
-        <br /> then let you reclaim the rent deposits in one click.
-      </p>
+        <section className="mt-4">
+          <Card className="px-6 pt-5 pb-4 sm:px-10 sm:pt-6 sm:pb-5">
+            <div className="text-center">
+              <div className="text-3xl text-cyan-300/90 font-medium tracking-wide mt-0">
+                RETRO
+              </div>
+              <h1 className="mt-1 text-3xl sm:text-4xl font-semibold text-white">
+                Scan & reclaim your locked SOL
+              </h1>
+              <p className="mx-auto mt-2 max-w-3xl text-[#DDA0DD]">
+                We search your wallet for empty token accounts (ATAs) and other closeable accounts,
+                <br /> then let you reclaim the rent deposits in one click.
+              </p>
 
-      {/* Collapsible header */}
-      <button
-        type="button"
-        onClick={() => setOpen((v) => !v)}
-        aria-expanded={open}
-        className="mx-auto mt-3 flex w-fit flex-col items-center gap-1 rounded-md
-                   border border-[#7B4DFF]/40 bg-white/5 px-4 py-2 text-sm font-semibold
-                   text-cyan-300/90 hover:bg-white/10"  /* was mt-4 */
-      >
-        <span>What Retro Does</span>
-        <span
-          className={`text-lg leading-none transition-transform ${open ? "rotate-180" : "rotate-0"}`}
-          aria-hidden
-        >
-          ▾
-        </span>
-      </button>
-    </div>
+              {/* Collapsible header */}
+              <button
+                type="button"
+                onClick={() => setOpen((v) => !v)}
+                aria-expanded={open}
+                className="mx-auto mt-3 flex w-fit flex-col items-center gap-1 rounded-md border border-[#7B4DFF]/40 bg-white/5 px-4 py-2 text-sm font-semibold text-cyan-300/90 hover:bg-white/10"
+              >
+                <span>What Retro Does</span>
+                <span
+                  className={`text-lg leading-none transition-transform ${
+                    open ? "rotate-180" : "rotate-0"
+                  }`}
+                  aria-hidden
+                >
+                  ▾
+                </span>
+              </button>
+            </div>
 
-    {/* Collapsible content */}
-    <div
-      className={`mx-auto mt-1 w-full overflow-hidden transition-[max-height,opacity,margin-bottom]
-                  duration-300 ${open ? "max-h-[400px] opacity-100 mb-0" : "max-h-0 opacity-0 -mb-2"}`}
-      /* ^ when collapsed, a small negative bottom margin pulls the card's bottom closer to the button */
-    >
-      <div className="mx-auto max-w-2xl pt-2 pb-1">
-        <ol className="space-y-4">
-          <Step n={1} title="Scan" desc="Identify empty ATAs / closeable accounts holding rent deposits." />
-          <Step n={2} title="Preview" desc="See estimated SOL you can reclaim and our fee before approving." />
-          <Step n={3} title="Claim" desc="Close accounts in a single flow; SOL refunds to your wallet." />
-        </ol>
-      </div>
-    </div>
-  </Card>
-</section>
-
+            {/* Collapsible content */}
+            <div
+              className={`mx-auto mt-1 w-full overflow-hidden transition-[max-height,opacity,margin-bottom] duration-300 ${
+                open ? "max-h-[400px] opacity-100 mb-0" : "max-h-0 opacity-0 -mb-2"
+              }`}
+            >
+              <div className="mx-auto max-w-2xl pt-2 pb-1">
+                <ol className="space-y-4">
+                  <Step
+                    n={1}
+                    title="Scan"
+                    desc="Identify empty ATAs / closeable accounts holding rent deposits."
+                  />
+                  <Step
+                    n={2}
+                    title="Preview"
+                    desc="See estimated SOL you can reclaim and our fee before approving."
+                  />
+                  <Step
+                    n={3}
+                    title="Claim"
+                    desc="Close accounts in a single flow; SOL refunds to your wallet."
+                  />
+                </ol>
+              </div>
+            </div>
+          </Card>
+        </section>
 
         {/* SECOND: stats + search/scan */}
         <section className="mt-6">
           <Card className="p-6 sm:p-8">
-            <div className="grid gap-3 sm:grid-cols-3">
+            {/* narrow middle column */}
+            <div className="grid gap-3 sm:grid-cols-[1fr_0.6fr_1fr]">
               <Fact label="Total Claimable SOL" value={fmtVal(claimableSol, "—")} />
               <Fact label="Accounts to Close" value={fmtVal(accountsToClose, "—")} />
               <Fact label="Claim Fee (10%)" value={fmtVal(feeSol, "—")} />
@@ -257,8 +263,7 @@ function Card({
 }) {
   return (
     <div
-      className={`rounded-2xl border bg-white/5
-      border-[#7B4DFF]/40 shadow-[0_0_0_1px_rgba(123,77,255,0.08)] ${className}`}
+      className={`rounded-2xl border bg-white/5 border-[#7B4DFF]/40 shadow-[0_0_0_1px_rgba(123,77,255,0.08)] ${className}`}
     >
       {children}
     </div>
@@ -270,7 +275,7 @@ function Fact({ label, value }: { label: string; value: string }) {
     <div className="rounded-xl border border-[#7B4DFF]/40 bg-black/40 px-4 py-4">
       <div className="flex items-center justify-between gap-4">
         <div className="text-sm text-gray-400">{label}</div>
-        <div className="text-2xl font-semibold text-white tracking-tight text-right">
+        <div className="text-2xl sm:text-3xl font-semibold text-white tracking-tight text-right tabular-nums">
           {value}
         </div>
       </div>
@@ -295,11 +300,9 @@ function Step({ n, title, desc }: { n: number; title: string; desc: string }) {
 function Th({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return <th className={`px-6 py-2 text-left font-semibold ${className}`}>{children}</th>;
 }
-
 function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return <td className={`px-6 py-3 text-gray-200 ${className}`}>{children}</td>;
 }
-
 function Tr({ children }: { children: React.ReactNode }) {
   return <tr className="hover:bg-white/5">{children}</tr>;
 }
