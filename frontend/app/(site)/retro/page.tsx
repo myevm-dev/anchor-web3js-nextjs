@@ -1,6 +1,6 @@
 // app/(site)/retro/page.tsx
 "use client";
-
+import Image from "next/image";
 import { useMemo, useState } from "react";
 import {
   Connection,
@@ -615,8 +615,19 @@ export default function RetroPage() {
                           </div>
                         </Td>
                         <Td title={r.accountAddress}>{short(r.accountAddress)}</Td>
-                        <Td>Empty Token Account</Td>
-                        <Td className="text-right">{r.reclaimable.toFixed(6)}</Td>
+                        <Td className="text-red-400">Empty Token Account</Td>
+                        <Td className="text-right">
+                        <div className="inline-flex items-center justify-end gap-2">
+                          <Image
+                            src="/images/solanalogo.webp"
+                            alt="SOL"
+                            width={16}
+                            height={16}
+                            className="rounded-[2px] opacity-90"
+                          />
+                          <span className="tabular-nums">{r.reclaimable.toFixed(6)}</span>
+                        </div>
+                      </Td>
                         <Td className="text-right pr-6">
                           <div className="flex justify-end gap-2">
                             <button
@@ -664,27 +675,59 @@ function Hero({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void 
           aria-expanded={open}
           className="mx-auto mt-3 flex w-fit flex-col items-center gap-1 rounded-md border border-[#7B4DFF]/40 bg-white/5 px-4 py-2 text-sm font-semibold text-cyan-300/90 hover:bg-white/10"
         >
-          <span>What Retro Does</span>
-          
+          <span>WTF is This?</span>
         </button>
       </div>
 
       <div
         className={`mx-auto mt-1 w-full overflow-hidden transition-[max-height,opacity,margin-bottom] duration-300 ${
-          open ? "max-h-[400px] opacity-100 mb-0" : "max-h-0 opacity-0 -mb-2"
+          open ? "max-h-[600px] opacity-100 mb-0" : "max-h-0 opacity-0 -mb-2"
         }`}
       >
-        <div className="mx-auto w-full max-w-5xl pt-2 pb-1 px-2 sm:px-4">
-          <ol className="space-y-3md:space-y-0 md:grid md:grid-cols-3 md:gap-8 lg:gap-8">
-            <Step n={1} title="Scan" desc="Identify empty ATA accounts holding rent deposits." />
-            <Step n={2} title="Preview" desc="See how much SOL you can reclaim." />
-            <Step n={3} title="Claim" desc="Close ATA in one click; SOL refund to your wallet." />
+        <div className="mx-auto w-full max-w-4xl pt-4 pb-2 px-2 sm:px-4 text-center">
+          {/* --- Centered Plain-English ATA / Rent explainer --- */}
+          <div className="mx-auto rounded-xl border border-[#7B4DFF]/30 bg-black/40 p-5 text-sm text-gray-200 text-center">
+            <p className="mx-auto max-w-2xl leading-relaxed">
+              On Solana, every time an SPL token lands in your account, it is given its own sub-account called an
+              <br />
+              ATA (Associated Token Account). As this puts stress on the network, the system holds a small deposit in SOL.
+              <br className="hidden sm:block" />
+              <span className="text-cyan-300">
+                This happening is built into the blockchain at the core and happening on many levels.
+              </span>
+              <br />
+              <span className="text-[#DDA0DD]">
+                Retro is simply a tool to let you claim your deposit back from unused accounts.
+              </span>
+            </p>
+
+            {/* Image centered under the text */}
+            <div className="mt-4 flex justify-center">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <Image
+                src="/images/rentclaimviz.png"
+                alt="ATA rent refund"
+                width={620}   // control size
+                height={300}  // any; aspect preserved if layout="intrinsic" (default)
+                className="mx-auto rounded-lg border border-white/10"
+              />
+            </div>
+          </div>
+
+
+
+          {/* --- Steps --- */}
+          <ol className="mt-6 space-y-3 md:space-y-0 md:grid md:grid-cols-3 md:gap-8 lg:gap-8 justify-center">
+            <Step n={1} title="Scan" desc="Find empty accounts holding SOL." />
+            <Step n={2} title="Preview" desc="See the total SOL you can get back." />
+            <Step n={3} title="Claim" desc="Close them and refund the SOL to you." />
           </ol>
         </div>
       </div>
     </>
   );
 }
+
 
 function TokenLogo({ meta, mint }: { meta?: TokenMeta; mint: string }) {
   if (meta?.logoURI) {
@@ -730,17 +773,25 @@ function Card({
 }
 
 function Fact({ label, value }: { label: string; value: string }) {
+  // Auto-color the value by label
+  const l = label.toLowerCase();
+  const valueColor =
+    l.includes("total claimable") ? "text-[#00FFA3]" : // Solana green
+    l.includes("accounts to close") ? "text-red-400" : // red
+    "text-white";
+
   return (
     <div className="rounded-xl border border-[#7B4DFF]/40 bg-black/40 px-4 py-4">
       <div className="flex items-center justify-between gap-4">
         <div className="text-sm text-gray-400">{label}</div>
-        <div className="text-2xl sm:text-3xl font-semibold text-white tracking-tight text-right tabular-nums">
+        <div className={`text-2xl sm:text-3xl font-semibold tracking-tight text-right tabular-nums ${valueColor}`}>
           {value}
         </div>
       </div>
     </div>
   );
 }
+
 
 function Step({ n, title, desc }: { n: number; title: string; desc: string }) {
   return (
@@ -757,10 +808,12 @@ function Step({ n, title, desc }: { n: number; title: string; desc: string }) {
 }
 
 /* table helpers (forward native props) */
-type ThProps = React.ThHTMLAttributes<HTMLTableHeaderCellElement> & {
+type ThProps = React.ThHTMLAttributes<HTMLTableCellElement> & {
   className?: string;
   children: React.ReactNode;
 };
+
+
 function Th({ children, className = "", ...rest }: ThProps) {
   return (
     <th {...rest} className={`px-6 py-2 text-left font-semibold ${className}`}>
@@ -769,10 +822,11 @@ function Th({ children, className = "", ...rest }: ThProps) {
   );
 }
 
-type TdProps = React.TdHTMLAttributes<HTMLTableDataCellElement> & {
+type TdProps = React.TdHTMLAttributes<HTMLTableCellElement> & {
   className?: string;
   children: React.ReactNode;
 };
+
 function Td({ children, className = "", ...rest }: TdProps) {
   return (
     <td {...rest} className={`px-6 py-3 text-gray-200 ${className}`}>
