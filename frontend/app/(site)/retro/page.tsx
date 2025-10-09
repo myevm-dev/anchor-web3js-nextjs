@@ -701,7 +701,7 @@ function Hero({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void 
 
             {/* Image centered under the text */}
             <div className="mt-4 flex justify-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
+             
               <Image
                 src="/images/rentclaimviz.png"
                 alt="ATA rent refund"
