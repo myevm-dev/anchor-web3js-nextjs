@@ -1,7 +1,7 @@
 // app/(site)/trade/[pairAddress]/page.tsx
 import DexScreenerChart from "@/components/DexScreenerChart";
 import { CustomTokenButton } from "@/components/ui/CustomTokenButton"; // ⬅️ NEW
-
+import { DemoBanner } from "@/components/ui/TradeDemoBanner";
 export const metadata = { title: "Trade | Driplet.Fun" };
 
 export default function TradePage({ params }: { params: { pairAddress: string } }) {
@@ -48,10 +48,9 @@ export default function TradePage({ params }: { params: { pairAddress: string } 
         </div>
       </aside>
 
-      {/* DESKTOP-ONLY FOOTER — FLUSH TO EDGES */}
-      <footer className="hidden md:flex fixed bottom-0 left-0 right-0 z-40 h-[100px] items-center justify-between border-t border-white/10 bg-black/85 px-4 backdrop-blur-sm">
-        
-      </footer>
+<footer className="hidden md:flex fixed bottom-0 left-0 right-0 z-40 h-[100px] items-center border-t border-white/10 bg-black/85 px-0 backdrop-blur-sm">
+  <DemoBanner />
+</footer>
     </div>
   );
 }
