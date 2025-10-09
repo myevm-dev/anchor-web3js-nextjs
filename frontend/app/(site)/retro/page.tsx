@@ -7,6 +7,7 @@ import {
   PublicKey,
   Transaction,
   LAMPORTS_PER_SOL,
+  SignatureStatus,
 } from "@solana/web3.js";
 import { createCloseAccountInstruction } from "@solana/spl-token";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
@@ -14,6 +15,7 @@ import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import { publicKey as umiPk } from "@metaplex-foundation/umi";
 import { fetchMetadataFromSeeds } from "@metaplex-foundation/mpl-token-metadata";
+import Image from "next/image";
 
 /* ---------- constants ---------- */
 const TOKEN_PROGRAM_ID = new PublicKey(
@@ -39,14 +41,17 @@ type ClosableAccount = {
 
 /* ---------- tiny utils ---------- */
 
+const isObj = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null;
+
 // retry helper for 429 / provider throttles
 async function withBackoff<T>(fn: () => Promise<T>, tries = 4): Promise<T> {
   let a = 0;
   for (;;) {
     try {
       return await fn();
-    } catch (e: any) {
-      const msg = String(e?.message ?? e);
+    } catch (e) {
+      const msg = String(e instanceof Error ? e.message : e);
       if ((!msg.includes("429") && !/rate/i.test(msg)) || a >= tries - 1) throw e;
       const wait = 400 * 2 ** a + Math.floor(Math.random() * 200);
       await new Promise((r) => setTimeout(r, wait));
@@ -69,16 +74,20 @@ const short = (s: string, n = 4) =>
   s.length <= 2 * n + 3 ? s : `${s.slice(0, n)}…${s.slice(-n)}`;
 
 const toStringSafe = (v: unknown): string =>
-  typeof v === "string" ? v : v instanceof Uint8Array ? new TextDecoder().decode(v) : "";
+  typeof v === "string"
+    ? v
+    : v instanceof Uint8Array
+    ? new TextDecoder().decode(v)
+    : "";
 
-// fetch with timeout
-async function fetchJsonWithTimeout(url: string, ms = 4500) {
+// fetch with timeout (generic, no any)
+async function fetchJsonWithTimeout<T = unknown>(url: string, ms = 4500): Promise<T> {
   const c = new AbortController();
   const id = setTimeout(() => c.abort(), ms);
   const r = await fetch(url, { signal: c.signal, cache: "default", mode: "cors" });
   clearTimeout(id);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  return r.json();
+  return (await r.json()) as T;
 }
 
 // http -> ws mapping
@@ -89,6 +98,21 @@ const toWs = (u: string) =>
 
 // Jupiter list (fault tolerant)
 let TOKEN_LIST_CACHE: Record<string, TokenMeta> | null = null;
+
+type JupListA = Array<{
+  address?: string;
+  mintAddress?: string;
+  mint?: string;
+  addresses?: { solana?: string };
+  name?: string;
+  symbol?: string;
+  logoURI?: string;
+  logo?: string;
+}>;
+
+type JupListB = {
+  tokens?: JupListA;
+};
 
 async function loadTokenList(): Promise<Record<string, TokenMeta>> {
   if (TOKEN_LIST_CACHE) return TOKEN_LIST_CACHE;
@@ -101,11 +125,11 @@ async function loadTokenList(): Promise<Record<string, TokenMeta>> {
 
   for (const url of sources) {
     try {
-      const data: any = await fetchJsonWithTimeout(url, 4500);
-      const list: any[] = Array.isArray(data)
-        ? data
-        : Array.isArray(data?.tokens)
-        ? data.tokens
+      const data = await fetchJsonWithTimeout<unknown>(url, 4500);
+      const list: JupListA = Array.isArray(data)
+        ? (data as JupListA)
+        : isObj(data) && Array.isArray((data as JupListB).tokens)
+        ? ((data as JupListB).tokens as JupListA)
         : [];
       const map: Record<string, TokenMeta> = {};
       for (const t of list) {
@@ -116,7 +140,7 @@ async function loadTokenList(): Promise<Record<string, TokenMeta>> {
       TOKEN_LIST_CACHE = map;
       return TOKEN_LIST_CACHE;
     } catch {
-      // next source
+      // try next source
     }
   }
   TOKEN_LIST_CACHE = {};
@@ -138,16 +162,20 @@ async function enrichWithOnchainMeta(
   await Promise.all(
     mints.map(async (mint) => {
       try {
-        const md: any = await fetchMetadataFromSeeds(umiInst, { mint: umiPk(mint) });
-        const container =
-          md && typeof md === "object" ? (("data" in md && md.data) ? md.data : md) : null;
+        const md = (await fetchMetadataFromSeeds(umiInst, { mint: umiPk(mint) })) as unknown;
+        const container = isObj(md)
+          ? (("data" in md && isObj((md as Record<string, unknown>).data))
+              ? ((md as Record<string, unknown>).data as Record<string, unknown>)
+              : (md as Record<string, unknown>))
+          : null;
+
         const name = toStringSafe(container?.name).replace(/\0/g, "").trim();
         const symbol = toStringSafe(container?.symbol).replace(/\0/g, "").trim();
         const uri = toStringSafe(container?.uri).replace(/\0/g, "").trim();
 
         let logoURI: string | undefined;
         if (uri) {
-          const j = (await fetchJsonWithTimeout(uri, 4500).catch(() => null)) as TokenMetaJson | null;
+          const j = await fetchJsonWithTimeout<TokenMetaJson | null>(uri, 4500).catch(() => null);
           if (j?.image) {
             logoURI = j.image.startsWith("ipfs://")
               ? `https://ipfs.io/ipfs/${j.image.replace("ipfs://", "")}`
@@ -156,7 +184,7 @@ async function enrichWithOnchainMeta(
         }
         if (name || symbol || logoURI) out[mint] = { name, symbol, logoURI };
       } catch {
-        // ignore
+        // ignore; fallback happens next
       }
     })
   );
@@ -169,7 +197,7 @@ async function confirmByPolling(
   signature: string,
   timeoutMs = 90_000,
   pollMs = 1200
-) {
+): Promise<SignatureStatus | null> {
   const start = Date.now();
   for (;;) {
     const st = await conn.getSignatureStatuses([signature]);
@@ -289,8 +317,8 @@ export default function RetroPage() {
           setMetaWarn("Token logos/names unavailable right now.");
         }
       })();
-    } catch (err: any) {
-      const msg = String(err?.message ?? err);
+    } catch (err: unknown) {
+      const msg = String(err instanceof Error ? err.message : err);
       setError(msg.includes("429") ? "Rate limited by RPC. Try again shortly (provider throttle)." : msg);
     } finally {
       setLoading(false);
@@ -329,7 +357,7 @@ export default function RetroPage() {
         )
       );
 
-      const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash("finalized");
+      const { blockhash } = await conn.getLatestBlockhash("finalized");
       tx.recentBlockhash = blockhash;
       tx.feePayer = publicKey;
 
@@ -341,8 +369,8 @@ export default function RetroPage() {
         recomputeTotalsFrom(next);
         return next;
       });
-    } catch (e: any) {
-      setError(e?.message ?? String(e));
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -377,7 +405,7 @@ export default function RetroPage() {
           );
         }
 
-        const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash("finalized");
+        const { blockhash } = await conn.getLatestBlockhash("finalized");
         tx.recentBlockhash = blockhash;
         tx.feePayer = publicKey;
 
@@ -390,8 +418,8 @@ export default function RetroPage() {
           return next;
         });
       }
-    } catch (e: any) {
-      setError(e?.message ?? String(e));
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : String(e));
     }
   };
 
@@ -590,7 +618,8 @@ function Hero({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void 
         </h1>
         <p className="mx-auto mt-2 max-w-3xl text-[#DDA0DD]">
           We search your wallet for empty token accounts (ATAs) and other closeable accounts,
-          <br /> then let you reclaim the rent deposits in one click. <span className="text-emerald-300">Free service.</span>
+          <br /> then let you reclaim the rent deposits in one click.{" "}
+          <span className="text-emerald-300">Free service.</span>
         </p>
 
         <button
@@ -600,12 +629,7 @@ function Hero({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void 
           className="mx-auto mt-3 flex w-fit flex-col items-center gap-1 rounded-md border border-[#7B4DFF]/40 bg-white/5 px-4 py-2 text-sm font-semibold text-cyan-300/90 hover:bg-white/10"
         >
           <span>What Retro Does</span>
-          <span
-            className={`text-lg leading-none transition-transform ${open ? "rotate-180" : "rotate-0"}`}
-            aria-hidden
-          >
-            ▾
-          </span>
+          
         </button>
       </div>
 
@@ -614,11 +638,11 @@ function Hero({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void 
           open ? "max-h-[400px] opacity-100 mb-0" : "max-h-0 opacity-0 -mb-2"
         }`}
       >
-        <div className="mx-auto max-w-2xl pt-2 pb-1">
-          <ol className="space-y-4">
-            <Step n={1} title="Scan" desc="Identify empty token accounts holding rent deposits." />
+        <div className="mx-auto w-full max-w-5xl pt-2 pb-1 px-2 sm:px-4">
+          <ol className="space-y-3md:space-y-0 md:grid md:grid-cols-3 md:gap-8 lg:gap-8">
+            <Step n={1} title="Scan" desc="Identify empty ata accounts holding rent deposits." />
             <Step n={2} title="Preview" desc="See how much SOL you can reclaim." />
-            <Step n={3} title="Claim" desc="Close accounts in one click; SOL refunds to your wallet. No fees." />
+            <Step n={3} title="Claim" desc="Close ata in one click; SOL refund to your wallet." />
           </ol>
         </div>
       </div>
@@ -628,13 +652,13 @@ function Hero({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void 
 
 function TokenLogo({ meta, mint }: { meta?: TokenMeta; mint: string }) {
   if (meta?.logoURI) {
-    // eslint-disable-next-line @next/next/no-img-element
     return (
-      <img
+      <Image
         src={meta.logoURI}
         alt={meta.symbol ?? mint}
+        width={28}
+        height={28}
         className="h-7 w-7 rounded-full object-cover border border-white/10"
-        referrerPolicy="no-referrer"
       />
     );
   }

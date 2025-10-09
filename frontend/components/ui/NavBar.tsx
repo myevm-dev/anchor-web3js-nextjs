@@ -75,7 +75,15 @@ function MobileLink({
     >
       <Icon size={18} strokeWidth={2.2} />
       <span className="mt-1 text-[11px] leading-none">{label}</span>
-      {badge ? <span className={badgeClass(badge.color)}>{badge.label}</span> : null}
+      <span
+  className={
+    badge
+      ? badgeClass(badge.color)
+      : "mt-0.5 inline-block text-[8px] leading-[8px] font-semibold uppercase tracking-[0.22em] opacity-0"
+  }
+>
+  {badge?.label ?? "\u00A0"}
+</span>
     </Link>
   );
 }
