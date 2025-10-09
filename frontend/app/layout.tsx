@@ -7,7 +7,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { SolanaProvider } from "@/components/providers/SolanaProvider";
 import { NavBar } from "@/components/ui/NavBar";
 import { GlobalSearchBar } from "@/components/ui/GlobalSearchBar";
-import { DemoBanner } from "@/components/ui/DemoBanner";
 import { Toaster } from "sonner";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -30,8 +29,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </Suspense>
 
           <div className="pt-[120px] pb-20 md:pb-0">
-            <DemoBanner />
-            {/* ⬇️ wrap pages (covers /404 or any page using useSearchParams) */}
+       
+
             <Suspense fallback={null}>{children}</Suspense>
 
             <Toaster

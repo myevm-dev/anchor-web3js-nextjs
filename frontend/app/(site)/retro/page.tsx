@@ -6,7 +6,6 @@ import {
   Connection,
   PublicKey,
   Transaction,
-  SystemProgram,
   LAMPORTS_PER_SOL,
 } from "@solana/web3.js";
 import { createCloseAccountInstruction } from "@solana/spl-token";
@@ -20,13 +19,8 @@ import { fetchMetadataFromSeeds } from "@metaplex-foundation/mpl-token-metadata"
 const TOKEN_PROGRAM_ID = new PublicKey(
   "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 );
-const FEE_BPS = 1000; // 10%
 const RPC =
-  process.env.NEXT_PUBLIC_SOLANA_RPC ??
-  "https://api.mainnet-beta.solana.com";
-const FEE_TREASURY = new PublicKey(
-  "PpokPuQ4zhMkTc8B376acPzAXiVZTaakWjqMaWKfJ9P"
-);
+  process.env.NEXT_PUBLIC_SOLANA_RPC ?? "https://api.mainnet-beta.solana.com";
 const MAX_CLOSES_PER_TX = 8;
 
 /* ---------- types ---------- */
@@ -72,7 +66,7 @@ function fmtVal(v: number | null, empty = "—") {
   return v % 1 ? v.toFixed(6) : String(v);
 }
 const short = (s: string, n = 4) =>
-  (s.length <= 2 * n + 3 ? s : `${s.slice(0, n)}…${s.slice(-n)}`);
+  s.length <= 2 * n + 3 ? s : `${s.slice(0, n)}…${s.slice(-n)}`;
 
 const toStringSafe = (v: unknown): string =>
   typeof v === "string" ? v : v instanceof Uint8Array ? new TextDecoder().decode(v) : "";
@@ -86,6 +80,10 @@ async function fetchJsonWithTimeout(url: string, ms = 4500) {
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   return r.json();
 }
+
+// http -> ws mapping
+const toWs = (u: string) =>
+  u.replace(/^https?:\/\//, (m) => (m === "https://" ? "wss://" : "ws://"));
 
 /* ---------- metadata helpers ---------- */
 
@@ -118,7 +116,7 @@ async function loadTokenList(): Promise<Record<string, TokenMeta>> {
       TOKEN_LIST_CACHE = map;
       return TOKEN_LIST_CACHE;
     } catch {
-      // try next source
+      // next source
     }
   }
   TOKEN_LIST_CACHE = {};
@@ -158,11 +156,35 @@ async function enrichWithOnchainMeta(
         }
         if (name || symbol || logoURI) out[mint] = { name, symbol, logoURI };
       } catch {
-        // ignore; fallback happens next
+        // ignore
       }
     })
   );
   return out;
+}
+
+/* ---------- WS-free confirmation ---------- */
+async function confirmByPolling(
+  conn: Connection,
+  signature: string,
+  timeoutMs = 90_000,
+  pollMs = 1200
+) {
+  const start = Date.now();
+  for (;;) {
+    const st = await conn.getSignatureStatuses([signature]);
+    const s = st.value[0];
+    if (s) {
+      if (s.err) throw new Error(`Transaction failed: ${JSON.stringify(s.err)}`);
+      const ok =
+        (s.confirmations ?? 0) >= 1 ||
+        s.confirmationStatus === "confirmed" ||
+        s.confirmationStatus === "finalized";
+      if (ok) return s;
+    }
+    if (Date.now() - start > timeoutMs) throw new Error("Confirmation timeout (polling)");
+    await new Promise((r) => setTimeout(r, pollMs));
+  }
 }
 
 /* ---------- page ---------- */
@@ -176,17 +198,9 @@ export default function RetroPage() {
   const [loading, setLoading] = useState(false);
   const [accountsToClose, setAccountsToClose] = useState<number | null>(null);
   const [claimableSol, setClaimableSol] = useState<number | null>(null);
-  const [feeSol, setFeeSol] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [metaWarn, setMetaWarn] = useState<string | null>(null);
   const [rows, setRows] = useState<ClosableAccount[]>([]);
-
-  // fee-pay state
-  const [feeLamportsRequired, setFeeLamportsRequired] = useState(0);
-  const [feePaidAll, setFeePaidAll] = useState(false);
-  const [payingAll, setPayingAll] = useState(false);
-  const [paidMap, setPaidMap] = useState<Record<string, boolean>>({});
-  const [payingRow, setPayingRow] = useState<string | null>(null);
 
   const { connection: connectionFromAdapter } = useConnection();
   const { publicKey, sendTransaction } = useWallet();
@@ -204,39 +218,32 @@ export default function RetroPage() {
     [publicKey, scannedOwner, connectedAddress]
   );
 
-  const allRowsPaid = useMemo(
-    () => rows.length > 0 && rows.every((r) => !!paidMap[r.accountAddress]),
-    [rows, paidMap]
-  );
-
-  async function handleScan(e: React.FormEvent) {
-    e.preventDefault();
-    if (loading) return;
-
+  /* ---------- shared scan helper (used by Use Wallet & form submit) ---------- */
+  async function runScan(addr: string) {
     setError(null);
     setMetaWarn(null);
     setLoading(true);
     setAccountsToClose(null);
     setClaimableSol(null);
-    setFeeSol(null);
     setRows([]);
 
     try {
-      const addr = query.trim();
-      if (!addr) throw new Error("Enter a wallet address to scan.");
       const owner = new PublicKey(addr);
       setScannedOwner(owner.toBase58());
 
-      const rpcConn = connectionFromAdapter ?? new Connection(RPC, { commitment: "processed" });
+      const rpcConn =
+        connectionFromAdapter ??
+        new Connection(RPC, {
+          commitment: "processed",
+          wsEndpoint: toWs(RPC),
+        });
 
-      // Low-CU (unparsed)
       const res = await withBackoff(() =>
         rpcConn.getTokenAccountsByOwner(owner, { programId: TOKEN_PROGRAM_ID })
       );
 
       const closables: ClosableAccount[] = [];
       for (const it of res.value) {
-        // raw SPL account data to check amount==0
         const raw =
           it.account.data instanceof Buffer
             ? new Uint8Array(it.account.data)
@@ -258,23 +265,12 @@ export default function RetroPage() {
 
       const totalLamports = closables.reduce((s, c) => s + c.lamports, 0);
       const claimable = +(totalLamports / LAMPORTS_PER_SOL).toFixed(6);
-      const feeLamports = Math.floor((totalLamports * FEE_BPS) / 10_000);
 
-      // Show rows + stats immediately
       setAccountsToClose(closables.length);
       setClaimableSol(claimable);
-      setFeeSol(+(feeLamports / LAMPORTS_PER_SOL).toFixed(6));
-      setFeeLamportsRequired(feeLamports);
-
-      // reset fee-pay state on every fresh scan
-      setFeePaidAll(false);
-      setPaidMap({});
-      setPayingAll(false);
-      setPayingRow(null);
-
       setRows(closables);
 
-      // Enrich metadata in the background:
+      // Enrich metadata (best-effort)
       (async () => {
         try {
           const mints = Array.from(new Set(closables.map((c) => c.mint)));
@@ -301,98 +297,13 @@ export default function RetroPage() {
     }
   }
 
-  /* ---------- fee payment ---------- */
-
-  async function handlePayFeeAll() {
-    try {
-      if (!publicKey) throw new Error("Connect your wallet first.");
-      if (!canClaim) throw new Error("Connect the scanned wallet to pay.");
-      if (feeLamportsRequired <= 0) throw new Error("Nothing to close.");
-
-      setPayingAll(true);
-      const conn = connectionFromAdapter ?? new Connection(RPC, { commitment: "processed" });
-
-      const tx = new Transaction().add(
-        SystemProgram.transfer({
-          fromPubkey: publicKey,
-          toPubkey: FEE_TREASURY,
-          lamports: feeLamportsRequired,
-        })
-      );
-
-      const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash("finalized");
-      tx.recentBlockhash = blockhash;
-      tx.feePayer = publicKey;
-
-      const sig = await sendTransaction(tx, conn);
-      await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
-
-      setFeePaidAll(true);
-    } catch (e: any) {
-      setError(e?.message ?? String(e));
-    } finally {
-      setPayingAll(false);
-    }
-  }
-
-  async function handlePayFeeRow(r: ClosableAccount) {
-    try {
-      if (!publicKey) throw new Error("Connect your wallet first.");
-      if (!canClaim) throw new Error("Connect the scanned wallet to pay.");
-      const rowFeeLamports = Math.floor((r.lamports * FEE_BPS) / 10_000);
-      if (rowFeeLamports <= 0) {
-        setPaidMap((prev) => ({ ...prev, [r.accountAddress]: true }));
-        return;
-      }
-
-      setPayingRow(r.accountAddress);
-      const conn = connectionFromAdapter ?? new Connection(RPC, { commitment: "processed" });
-
-      const tx = new Transaction().add(
-        SystemProgram.transfer({
-          fromPubkey: publicKey,
-          toPubkey: FEE_TREASURY,
-          lamports: rowFeeLamports,
-        })
-      );
-
-      const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash("finalized");
-      tx.recentBlockhash = blockhash;
-      tx.feePayer = publicKey;
-
-      const sig = await sendTransaction(tx, conn);
-      await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
-
-      setPaidMap((prev) => ({ ...prev, [r.accountAddress]: true }));
-    } catch (e: any) {
-      setError(e?.message ?? String(e));
-    } finally {
-      setPayingRow(null);
-    }
-  }
-
-  /* ---------- recompute + claiming ---------- */
+  /* ---------- recompute + claiming (no fees) ---------- */
 
   function recomputeTotalsFrom(nextRows: ClosableAccount[]) {
     const totalLamports = nextRows.reduce((s, r) => s + (r.lamports | 0), 0);
     const claimable = +(totalLamports / LAMPORTS_PER_SOL).toFixed(6);
-    const feeLamports = Math.floor((totalLamports * FEE_BPS) / 10_000);
-
     setAccountsToClose(nextRows.length);
     setClaimableSol(claimable);
-    setFeeSol(+(feeLamports / LAMPORTS_PER_SOL).toFixed(6));
-    setFeeLamportsRequired(feeLamports);
-
-    // global-all fee becomes invalid if the set changes
-    setFeePaidAll(false);
-
-    // keep per-row paid flags only for rows that remain
-    setPaidMap((prev) => {
-      const alive = new Set(nextRows.map((r) => r.accountAddress));
-      const next: Record<string, boolean> = {};
-      for (const k in prev) if (alive.has(k)) next[k] = prev[k];
-      return next;
-    });
   }
 
   async function handleClaimOne(r: ClosableAccount) {
@@ -402,28 +313,29 @@ export default function RetroPage() {
       if (connectedAddress !== scannedOwner) {
         throw new Error("Connected wallet must match the scanned address.");
       }
-      if (!feePaidAll && !paidMap[r.accountAddress]) {
-        throw new Error("Pay the 10% fee (all or this row) to unlock claim.");
-      }
 
-      const conn = connectionFromAdapter ?? new Connection(RPC, { commitment: "processed" });
+      const conn =
+        connectionFromAdapter ??
+        new Connection(RPC, {
+          commitment: "processed",
+          wsEndpoint: toWs(RPC),
+        });
 
-      // Close-only tx
-      const closeIx = createCloseAccountInstruction(
-        new PublicKey(r.accountAddress),
-        publicKey,
-        publicKey
+      const tx = new Transaction().add(
+        createCloseAccountInstruction(
+          new PublicKey(r.accountAddress),
+          publicKey,
+          publicKey
+        )
       );
-      const tx = new Transaction().add(closeIx);
 
       const { blockhash, lastValidBlockHeight } = await conn.getLatestBlockhash("finalized");
       tx.recentBlockhash = blockhash;
       tx.feePayer = publicKey;
 
-      const sig = await sendTransaction(tx, conn);
-      await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
+      const sig = await sendTransaction(tx, conn, { skipPreflight: false });
+      await confirmByPolling(conn, sig);
 
-      // remove row + recompute totals
       setRows((prev) => {
         const next = prev.filter((x) => x.accountAddress !== r.accountAddress);
         recomputeTotalsFrom(next);
@@ -441,11 +353,14 @@ export default function RetroPage() {
       if (connectedAddress !== scannedOwner) {
         throw new Error("Connected wallet must match the scanned address.");
       }
-      if (!feePaidAll && !allRowsPaid) {
-        throw new Error("Pay the 10% fee (all or per-row for all rows) to unlock Close All.");
-      }
 
-      const conn = connectionFromAdapter ?? new Connection(RPC, { commitment: "processed" });
+      const conn =
+        connectionFromAdapter ??
+        new Connection(RPC, {
+          commitment: "processed",
+          wsEndpoint: toWs(RPC),
+        });
+
       const snapshot = [...rows];
 
       for (let i = 0; i < snapshot.length; i += MAX_CLOSES_PER_TX) {
@@ -466,10 +381,9 @@ export default function RetroPage() {
         tx.recentBlockhash = blockhash;
         tx.feePayer = publicKey;
 
-        const sig = await sendTransaction(tx, conn);
-        await conn.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, "confirmed");
+        const sig = await sendTransaction(tx, conn, { skipPreflight: false });
+        await confirmByPolling(conn, sig);
 
-        // prune the ones we just closed
         setRows((prev) => {
           const next = prev.filter((r) => !batch.find((b) => b.accountAddress === r.accountAddress));
           recomputeTotalsFrom(next);
@@ -480,6 +394,19 @@ export default function RetroPage() {
       setError(e?.message ?? String(e));
     }
   };
+
+  /* ---------- form handlers ---------- */
+
+  async function handleScan(e: React.FormEvent) {
+    e.preventDefault();
+    if (loading) return;
+    const addr = query.trim();
+    if (!addr) {
+      setError("Enter a wallet address to scan.");
+      return;
+    }
+    await runScan(addr);
+  }
 
   /* ---------- render ---------- */
 
@@ -498,14 +425,39 @@ export default function RetroPage() {
         {/* STATS + FORM */}
         <section className="mt-6">
           <Card className="p-6 sm:p-8">
-            <div className="grid gap-3 sm:grid-cols-[1fr_0.6fr_1fr]">
+            <div className="grid gap-3 sm:grid-cols-[1fr_1fr]">
               <Fact label="Total Claimable SOL" value={fmtVal(claimableSol, "—")} />
               <Fact label="Accounts to Close" value={fmtVal(accountsToClose, "—")} />
-              <Fact label="Claim Fee (10%)" value={fmtVal(feeSol, "—")} />
             </div>
 
             <form className="mt-6" onSubmit={handleScan}>
               <div className="flex flex-col sm:flex-row gap-3">
+                {/* 1) Use Wallet (leftmost) */}
+                {publicKey ? (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const addr = connectedAddress;
+                      setQuery(addr);
+                      if (!loading) await runScan(addr);
+                    }}
+                    className="shrink-0 rounded-xl border border-[#7B4DFF]/40 bg-white/10 px-4 py-2.5 text-white hover:bg-white/20"
+                    title={`Use connected wallet ${short(connectedAddress, 6)}`}
+                  >
+                    Use Wallet
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled
+                    className="shrink-0 rounded-xl border border-[#7B4DFF]/20 bg-white/5 px-4 py-2.5 text-gray-400 cursor-not-allowed"
+                    title="Not signed in"
+                  >
+                    Not signed in
+                  </button>
+                )}
+
+                {/* 2) Search Bar (middle) */}
                 <input
                   type="text"
                   inputMode="search"
@@ -514,6 +466,8 @@ export default function RetroPage() {
                   placeholder="Connect your wallet or check an address"
                   className="flex-1 rounded-xl border border-[#7B4DFF]/40 bg-black/40 px-4 py-2.5 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7B4DFF]/40"
                 />
+
+                {/* 3) Scan Button (rightmost) */}
                 <button
                   type="submit"
                   disabled={loading}
@@ -522,12 +476,13 @@ export default function RetroPage() {
                   {loading ? "Scanning…" : "Scan Wallet"}
                 </button>
               </div>
+
               {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
               {metaWarn && <p className="mt-2 text-xs text-gray-400">{metaWarn}</p>}
               {scannedOwner && (
                 <p className="mt-2 text-xs text-gray-400">
                   Scanned: <span className="text-gray-300">{short(scannedOwner, 6)}</span>{" "}
-                  {canClaim ? "— ready to pay & claim" : "— connect this wallet to proceed"}
+                  {canClaim ? "— ready to claim (free)" : "— connect this wallet to claim"}
                 </p>
               )}
             </form>
@@ -546,26 +501,11 @@ export default function RetroPage() {
                   </p>
                 </div>
 
-                {/* Header actions: Pay All + Close All */}
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={handlePayFeeAll}
-                    disabled={!canClaim || rows.length === 0 || feePaidAll || payingAll}
-                    className="rounded-xl border border-rose-400/40 bg-rose-500/15 px-4 py-2.5 text-rose-200 hover:bg-rose-500/25 disabled:opacity-50"
-                    title={canClaim ? "Pay 10% fee for all accounts" : "Connect the scanned wallet to pay"}
-                  >
-                    {feePaidAll
-                      ? "Fee Paid ✓"
-                      : payingAll
-                      ? "Paying…"
-                      : `Pay All ${(feeLamportsRequired / LAMPORTS_PER_SOL).toFixed(6)} SOL`}
-                  </button>
-
-                  <button
-                    type="button"
                     onClick={handleClaimAll}
-                    disabled={!canClaim || rows.length === 0 || (!feePaidAll && !allRowsPaid)}
+                    disabled={!canClaim || rows.length === 0}
                     className="rounded-xl border border-emerald-400/40 bg-emerald-400/15 px-4 py-2.5 text-emerald-200 hover:bg-emerald-400/25 disabled:opacity-50"
                     title={canClaim ? "Close all empty token accounts" : "Connect the scanned wallet to claim"}
                   >
@@ -594,67 +534,39 @@ export default function RetroPage() {
                       </td>
                     </tr>
                   ) : (
-                    rows.map((r) => {
-                      const rowFeeSol =
-                        Math.floor((r.lamports * FEE_BPS) / 10_000) / LAMPORTS_PER_SOL;
-                      const isRowPaid = !!paidMap[r.accountAddress] || feePaidAll;
-
-                      return (
-                        <Tr key={r.accountAddress}>
-                          <Td title={r.mint}>
-                            <div className="flex items-center gap-3">
-                              <TokenLogo meta={r.meta} mint={r.mint} />
-                              <div className="flex flex-col">
-                                <span className="text-white">
-                                  {r.meta?.name ?? short(r.mint, 5)}
-                                  {r.meta?.symbol ? (
-                                    <span className="text-gray-400"> · {r.meta.symbol}</span>
-                                  ) : null}
-                                </span>
-                                <span className="text-[11px] text-gray-400">{short(r.mint)}</span>
-                              </div>
+                    rows.map((r) => (
+                      <Tr key={r.accountAddress}>
+                        <Td title={r.mint}>
+                          <div className="flex items-center gap-3">
+                            <TokenLogo meta={r.meta} mint={r.mint} />
+                            <div className="flex flex-col">
+                              <span className="text-white">
+                                {r.meta?.name ?? short(r.mint, 5)}
+                                {r.meta?.symbol ? (
+                                  <span className="text-gray-400"> · {r.meta.symbol}</span>
+                                ) : null}
+                              </span>
+                              <span className="text-[11px] text-gray-400">{short(r.mint)}</span>
                             </div>
-                          </Td>
-                          <Td title={r.accountAddress}>{short(r.accountAddress)}</Td>
-                          <Td>Empty Token Account</Td>
-                          <Td className="text-right">{r.reclaimable.toFixed(6)}</Td>
-                          <Td className="text-right pr-6">
-                            <div className="flex justify-end gap-2">
-                              {/* Step 1: Pay (per row) */}
-                              <button
-                                onClick={() => handlePayFeeRow(r)}
-                                disabled={
-                                  !canClaim ||
-                                  feePaidAll ||
-                                  !!paidMap[r.accountAddress] ||
-                                  payingRow === r.accountAddress
-                                }
-                                className="rounded-lg border border-rose-400/40 bg-rose-500/15 px-3 py-1.5 text-sm text-rose-200 hover:bg-rose-500/25 disabled:opacity-50"
-                                title="Pay 10% fee for this account"
-                              >
-                                {feePaidAll
-                                  ? "Paid ✓"
-                                  : paidMap[r.accountAddress]
-                                  ? "Paid ✓"
-                                  : payingRow === r.accountAddress
-                                  ? "Paying…"
-                                  : `Pay ${rowFeeSol.toFixed(5)}`}
-                              </button>
-
-                              {/* Step 2: Claim */}
-                              <button
-                                onClick={() => handleClaimOne(r)}
-                                disabled={!canClaim || !isRowPaid}
-                                className="rounded-lg border border-emerald-400/40 bg-emerald-400/15 px-3 py-1.5 text-sm text-emerald-200 hover:bg-emerald-400/25 disabled:opacity-60"
-                                title="Close and reclaim rent"
-                              >
-                                Claim
-                              </button>
-                            </div>
-                          </Td>
-                        </Tr>
-                      );
-                    })
+                          </div>
+                        </Td>
+                        <Td title={r.accountAddress}>{short(r.accountAddress)}</Td>
+                        <Td>Empty Token Account</Td>
+                        <Td className="text-right">{r.reclaimable.toFixed(6)}</Td>
+                        <Td className="text-right pr-6">
+                          <div className="flex justify-end gap-2">
+                            <button
+                              onClick={() => handleClaimOne(r)}
+                              disabled={!canClaim}
+                              className="rounded-lg border border-emerald-400/40 bg-emerald-400/15 px-3 py-1.5 text-sm text-emerald-200 hover:bg-emerald-400/25 disabled:opacity-60"
+                              title="Close and reclaim rent"
+                            >
+                              Claim
+                            </button>
+                          </div>
+                        </Td>
+                      </Tr>
+                    ))
                   )}
                 </tbody>
               </table>
@@ -678,7 +590,7 @@ function Hero({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void 
         </h1>
         <p className="mx-auto mt-2 max-w-3xl text-[#DDA0DD]">
           We search your wallet for empty token accounts (ATAs) and other closeable accounts,
-          <br /> then let you reclaim the rent deposits in one click.
+          <br /> then let you reclaim the rent deposits in one click. <span className="text-emerald-300">Free service.</span>
         </p>
 
         <button
@@ -689,9 +601,7 @@ function Hero({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void 
         >
           <span>What Retro Does</span>
           <span
-            className={`text-lg leading-none transition-transform ${
-              open ? "rotate-180" : "rotate-0"
-            }`}
+            className={`text-lg leading-none transition-transform ${open ? "rotate-180" : "rotate-0"}`}
             aria-hidden
           >
             ▾
@@ -707,8 +617,8 @@ function Hero({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void 
         <div className="mx-auto max-w-2xl pt-2 pb-1">
           <ol className="space-y-4">
             <Step n={1} title="Scan" desc="Identify empty token accounts holding rent deposits." />
-            <Step n={2} title="Preview" desc="See estimated SOL you can reclaim and our 10% fee before approving." />
-            <Step n={3} title="Claim" desc="Close accounts in a single flow; SOL refunds to your wallet." />
+            <Step n={2} title="Preview" desc="See how much SOL you can reclaim." />
+            <Step n={3} title="Claim" desc="Close accounts in one click; SOL refunds to your wallet. No fees." />
           </ol>
         </div>
       </div>

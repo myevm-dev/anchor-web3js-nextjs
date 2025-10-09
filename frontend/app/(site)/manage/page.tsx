@@ -10,6 +10,7 @@ import { PublicKey } from "@solana/web3.js";
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import { publicKey as umiPk, type Umi } from "@metaplex-foundation/umi";
 import { fetchMetadataFromSeeds } from "@metaplex-foundation/mpl-token-metadata";
+import { DemoBanner } from "@/components/ui/DemoBanner";
 
 // --- CONFIG ---
 const MINTS: string[] = [
@@ -155,6 +156,7 @@ export default function ManagePage() {
               Create New
             </Link>
           </div>
+               <DemoBanner />
         </header>
 
         <section className="mt-6">

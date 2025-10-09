@@ -9,6 +9,7 @@ import type { VaultSummary } from "@/components/ui/VaultCard";
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import { publicKey as umiPk } from "@metaplex-foundation/umi";
 import { fetchMetadataFromSeeds } from "@metaplex-foundation/mpl-token-metadata";
+import { DemoBanner } from "@/components/ui/DemoBanner";
 
 const TERM_SECS = 15_724_800; // 6 months
 
@@ -147,6 +148,7 @@ export default function Home() {
           <p className="mt-1 text-gray-300">
             Stake tokens and earn rewards by the second.
           </p>
+               <DemoBanner />
         </header>
 
         <VaultGrid
