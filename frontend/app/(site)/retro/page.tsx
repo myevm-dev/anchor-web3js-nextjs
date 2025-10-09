@@ -705,8 +705,8 @@ function Hero({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void 
               <Image
                 src="/images/rentclaimviz.png"
                 alt="ATA rent refund"
-                width={620}   // control size
-                height={300}  // any; aspect preserved if layout="intrinsic" (default)
+                width={620}   
+                height={300} 
                 className="mx-auto rounded-lg border border-white/10"
               />
             </div>
