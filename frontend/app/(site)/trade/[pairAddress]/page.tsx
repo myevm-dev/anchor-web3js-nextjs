@@ -44,7 +44,7 @@ export default async function TradePage({
       {/* SIDEBARS */}
       <aside className="hidden md:flex fixed left-0 top-[56px] bottom-[100px] z-40 w-[120px] rounded-r-xl border border-l-0 border-white/10 bg-black/80 backdrop-blur-sm">
         <div className="mx-auto my-4 flex flex-col items-center gap-3 overflow-auto">
-          {Array.from({ length: 12 }).map((_, i) => (
+          {Array.from({ length: 8 }).map((_, i) => (
             <CustomTokenButton key={`lsb-${i}`} title={`Add custom token ${i + 1}`} />
           ))}
         </div>
@@ -52,7 +52,7 @@ export default async function TradePage({
 
       <aside className="hidden md:flex fixed right-0 top-[56px] bottom-[100px] z-40 w-[120px] rounded-l-xl border border-r-0 border-white/10 bg-black/80 backdrop-blur-sm">
         <div className="mx-auto my-4 flex flex-col items-center gap-3 overflow-auto">
-          {Array.from({ length: 12 }).map((_, i) => (
+          {Array.from({ length: 8 }).map((_, i) => (
             <CustomTokenButton key={`rsb-${i}`} title={`Add custom token ${i + 1}`} />
           ))}
         </div>
