@@ -424,6 +424,16 @@ export default function RetroPage() {
     }
   };
 
+  function handleClear() {
+    setQuery("");
+    setScannedOwner("");
+    setRows([]);
+    setAccountsToClose(null);
+    setClaimableSol(null);
+    setError(null);
+    setMetaWarn(null);
+  }
+
   /* ---------- form handlers ---------- */
 
   async function handleScan(e: React.FormEvent) {
@@ -460,46 +470,48 @@ export default function RetroPage() {
             </div>
 
             <form className="mt-6" onSubmit={handleScan}>
-  <div className="flex flex-col sm:flex-row gap-3">
-    {/* 1) Use Wallet */}
-    {publicKey ? (
+  <div className="flex flex-col sm:flex-row items-stretch gap-3">
+    {/* LEFT: Use Wallet + Example */}
+    <div className="flex gap-3">
+      {publicKey ? (
+        <button
+          type="button"
+          onClick={async () => {
+            const addr = connectedAddress;
+            setQuery(addr);
+            if (!loading) await runScan(addr);
+          }}
+          className="w-[122px] shrink-0 rounded-xl border border-[#7B4DFF]/40 bg-white/10 px-4 py-2.5 text-white hover:bg-white/20"
+          title={`Use connected wallet ${short(connectedAddress, 6)}`}
+        >
+          Use Wallet
+        </button>
+      ) : (
+        <button
+          type="button"
+          disabled
+          className="w-[122px] shrink-0 rounded-xl border border-[#7B4DFF]/20 bg-white/5 px-4 py-2.5 text-gray-400 cursor-not-allowed"
+          title="Not signed in"
+        >
+          Use Wallet
+        </button>
+      )}
+
       <button
         type="button"
         onClick={async () => {
-          const addr = connectedAddress;
-          setQuery(addr);
-          if (!loading) await runScan(addr);
+          const demo = "5BQXc6Jiayh3rnqKeKCfSNcp7g6U9MxTrxLEv7EEGt8u";
+          setQuery(demo);
+          if (!loading) await runScan(demo);
         }}
-        className="shrink-0 rounded-xl border border-[#7B4DFF]/40 bg-white/10 px-4 py-2.5 text-white hover:bg-white/20"
-        title={`Use connected wallet ${short(connectedAddress, 6)}`}
+        className="w-[122px] shrink-0 rounded-xl border border-[#7B4DFF]/40 bg-white/10 px-4 py-2.5 text-white hover:bg-white/20"
+        title="Load example address"
       >
-        Use Wallet
+        Example
       </button>
-    ) : (
-      <button
-        type="button"
-        disabled
-        className="shrink-0 rounded-xl border border-[#7B4DFF]/20 bg-white/5 px-4 py-2.5 text-gray-400 cursor-not-allowed"
-        title="Not signed in"
-      >
-        Not signed in
-      </button>
-    )}
+    </div>
 
-    {/* 1.5) See Example */}
-    <button
-      type="button"
-      onClick={async () => {
-        setQuery(EXAMPLE_ADDR);
-        if (!loading) await runScan(EXAMPLE_ADDR);
-      }}
-      className="shrink-0 rounded-xl border border-[#7B4DFF]/40 bg-white/10 px-4 py-2.5 text-white hover:bg-white/20"
-      title="Load an example wallet and scan"
-    >
-      Example
-    </button>
-
-    {/* 2) Search Bar */}
+    {/* MIDDLE: Search bar */}
     <input
       type="text"
       inputMode="search"
@@ -508,25 +520,38 @@ export default function RetroPage() {
       placeholder="Connect your wallet or check an address"
       className="flex-1 rounded-xl border border-[#7B4DFF]/40 bg-black/40 px-4 py-2.5 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7B4DFF]/40"
     />
-                {/* 3) Scan Button (rightmost) */}
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="shrink-0 rounded-xl border border-[#7B4DFF]/40 bg-white/10 px-4 py-2.5 text-white hover:bg-white/20 disabled:opacity-60"
-                >
-                  {loading ? "Scanning…" : "Scan Wallet"}
-                </button>
-              </div>
 
-              {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
-              {metaWarn && <p className="mt-2 text-xs text-gray-400">{metaWarn}</p>}
-              {scannedOwner && (
-                <p className="mt-2 text-xs text-gray-400">
-                  Scanned: <span className="text-gray-300">{short(scannedOwner, 6)}</span>{" "}
-                  {canClaim ? "— ready to claim (free)" : "— connect this wallet to claim"}
-                </p>
-              )}
-            </form>
+    {/* RIGHT: Clear + Scan Wallet */}
+    <div className="flex gap-3">
+      <button
+        type="button"
+        onClick={handleClear}
+        disabled={!query && rows.length === 0 && !scannedOwner && !error && !metaWarn}
+        className="w-[122px] shrink-0 rounded-xl border border-[#7B4DFF]/40 bg-white/10 px-4 py-2.5 text-white hover:bg-white/20 disabled:opacity-50"
+        title="Clear input and results"
+      >
+        Clear
+      </button>
+
+      <button
+        type="submit"
+        disabled={loading}
+        className="w-[122px] shrink-0 rounded-xl border border-[#7B4DFF]/40 bg-white/10 px-4 py-2.5 text-white hover:bg-white/20 disabled:opacity-60"
+      >
+        {loading ? "Scanning…" : "Scan Wallet"}
+      </button>
+    </div>
+  </div>
+
+  {error && <p className="mt-3 text-sm text-red-400">{error}</p>}
+  {metaWarn && <p className="mt-2 text-xs text-gray-400">{metaWarn}</p>}
+  {scannedOwner && (
+    <p className="mt-2 text-xs text-gray-400">
+      Scanned: <span className="text-gray-300">{short(scannedOwner, 6)}</span>{" "}
+      {canClaim ? "— ready to claim (free)" : "— connect this wallet to claim"}
+    </p>
+  )}
+</form>
           </Card>
         </section>
 
@@ -550,7 +575,7 @@ export default function RetroPage() {
                     className="rounded-xl border border-emerald-400/40 bg-emerald-400/15 px-4 py-2.5 text-emerald-200 hover:bg-emerald-400/25 disabled:opacity-50"
                     title={canClaim ? "Close all empty token accounts" : "Connect the scanned wallet to claim"}
                   >
-                    Close All{rows.length ? ` (${rows.length})` : ""}
+                    Close/Claim All{rows.length ? ` (${rows.length})` : ""}
                   </button>
                 </div>
               </div>

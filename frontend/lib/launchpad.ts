@@ -16,7 +16,7 @@ export function detectLaunchpad(mintOrAddress?: string): LaunchpadInfo {
   if (s.endsWith("pump")) {
     return {
       kind: "pump",
-      logoSrc: "/images/pumplogo.webp",
+      logoSrc: "/images/pumpfunlogo.webp",
       link: `https://pump.fun/advanced/coin/${mintOrAddress}`,
       isKnown: true,
     };

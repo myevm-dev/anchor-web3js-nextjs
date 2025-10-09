@@ -148,7 +148,7 @@ export default function Home() {
           <p className="mt-1 text-gray-300">
             Stake tokens and earn rewards by the second.
           </p>
-               <DemoBanner />
+          <DemoBanner />
         </header>
 
         <VaultGrid
