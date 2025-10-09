@@ -14,9 +14,9 @@ import { DemoBanner } from "@/components/ui/DemoBanner";
 
 // --- CONFIG ---
 const MINTS: string[] = [
-  "J2eaKn35rp82T6RFEsNK9CLRHEKV9BLXjedFM3q6pump",
-  "8Y5MwnUM19uqhnsrFnKijrmn33CmHBTUoedXtTGDpump",
-  "ERpXkEafaKuKEARBCFsVnLZA1GARWUjBBbQCukXpbonk",
+ "4VwJLikGQ5N59BRzxyaZZjLiB38r6HF4mJ1mU8fjbonk",
+  "9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump",
+  "2T6vwSajccRRb4roAdqZqgZhtWdPqVQm8kjDUrSqMray",
 ];
 
 const TERM_SECS = 182 * 24 * 60 * 60;

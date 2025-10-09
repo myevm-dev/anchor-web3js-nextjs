@@ -52,10 +52,8 @@ export default function ManageVaultCard({
       : "active");
 
   const launchpad = detectLaunchpad(v.mint);
-  const lpColor =
-    launchpad.kind === "pump" ? "#83efaa" :
-    launchpad.kind === "bonk" ? "#fe5e1f" :
-    "#18bdfd";
+  const lpColor = launchpad.color;
+
 
   const perSec = v.rewardNet != null ? v.rewardNet / (182 * 24 * 60 * 60) : undefined;
   const perDay = perSec != null ? perSec * 86400 : undefined;

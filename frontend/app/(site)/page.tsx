@@ -15,11 +15,15 @@ const TERM_SECS = 15_724_800; // 6 months
 
 
 const MINTS = [
-  "J2eaKn35rp82T6RFEsNK9CLRHEKV9BLXjedFM3q6pump",
-  "8Y5MwnUM19uqhnsrFnKijrmn33CmHBTUoedXtTGDpump",
-    "FQrNCk7HkXFEThzbtpdxqX5KaifLXAnPzseWXvksbonk",
   "34AeqX5MQGyrey2VnZdkeZCfM4qinp4F3X7pGxtipump",
+  "4VwJLikGQ5N59BRzxyaZZjLiB38r6HF4mJ1mU8fjbonk",
   "9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump",
+  "EE86yo1mfmqM3dNi1E82R6XSzCx8bGzHa7L4Cyy66ray",
+  "J2eaKn35rp82T6RFEsNK9CLRHEKV9BLXjedFM3q6pump",
+  "8m1VC6QoJ2eooXMrjFj7hS6g56ZEB7M7rVbbYa2CNdao",
+  "2T6vwSajccRRb4roAdqZqgZhtWdPqVQm8kjDUrSqMray",
+  "8Y5MwnUM19uqhnsrFnKijrmn33CmHBTUoedXtTGDpump",
+
 
 
 ];

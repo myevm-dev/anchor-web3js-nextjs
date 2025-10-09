@@ -63,10 +63,7 @@ export default function VaultCard({
 
   const launchpad = detectLaunchpad(v.mint);
   const perDay = (v.emissionPerSec ?? 0) * 86400;
-   const lpColor =
-    launchpad.kind === "pump" ? "#83efaa" :
-    launchpad.kind === "bonk" ? "#fe5e1f" :
-    "#18bdfd";
+const lpColor = launchpad.color;
 
   const nameNode =
     launchpad.kind === "pump" && launchpad.link ? (
