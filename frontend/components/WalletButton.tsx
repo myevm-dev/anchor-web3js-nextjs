@@ -53,7 +53,7 @@ export function WalletButton() {
           </div>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Devnet Only</p>
+          <p>LFG</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
