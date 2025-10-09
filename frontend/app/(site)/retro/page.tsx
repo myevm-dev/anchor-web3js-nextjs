@@ -24,6 +24,7 @@ const TOKEN_PROGRAM_ID = new PublicKey(
 const RPC =
   process.env.NEXT_PUBLIC_SOLANA_RPC ?? "https://api.mainnet-beta.solana.com";
 const MAX_CLOSES_PER_TX = 8;
+const EXAMPLE_ADDR = "5BQXc6Jiayh3rnqKeKCfSNcp7g6U9MxTrxLEv7EEGt8u";
 
 /* ---------- types ---------- */
 type MaybeEndpoint = { rpcEndpoint?: string; _rpcEndpoint?: string };
@@ -459,42 +460,54 @@ export default function RetroPage() {
             </div>
 
             <form className="mt-6" onSubmit={handleScan}>
-              <div className="flex flex-col sm:flex-row gap-3">
-                {/* 1) Use Wallet (leftmost) */}
-                {publicKey ? (
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      const addr = connectedAddress;
-                      setQuery(addr);
-                      if (!loading) await runScan(addr);
-                    }}
-                    className="shrink-0 rounded-xl border border-[#7B4DFF]/40 bg-white/10 px-4 py-2.5 text-white hover:bg-white/20"
-                    title={`Use connected wallet ${short(connectedAddress, 6)}`}
-                  >
-                    Use Wallet
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    disabled
-                    className="shrink-0 rounded-xl border border-[#7B4DFF]/20 bg-white/5 px-4 py-2.5 text-gray-400 cursor-not-allowed"
-                    title="Not signed in"
-                  >
-                    Not signed in
-                  </button>
-                )}
+  <div className="flex flex-col sm:flex-row gap-3">
+    {/* 1) Use Wallet */}
+    {publicKey ? (
+      <button
+        type="button"
+        onClick={async () => {
+          const addr = connectedAddress;
+          setQuery(addr);
+          if (!loading) await runScan(addr);
+        }}
+        className="shrink-0 rounded-xl border border-[#7B4DFF]/40 bg-white/10 px-4 py-2.5 text-white hover:bg-white/20"
+        title={`Use connected wallet ${short(connectedAddress, 6)}`}
+      >
+        Use Wallet
+      </button>
+    ) : (
+      <button
+        type="button"
+        disabled
+        className="shrink-0 rounded-xl border border-[#7B4DFF]/20 bg-white/5 px-4 py-2.5 text-gray-400 cursor-not-allowed"
+        title="Not signed in"
+      >
+        Not signed in
+      </button>
+    )}
 
-                {/* 2) Search Bar (middle) */}
-                <input
-                  type="text"
-                  inputMode="search"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Connect your wallet or check an address"
-                  className="flex-1 rounded-xl border border-[#7B4DFF]/40 bg-black/40 px-4 py-2.5 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7B4DFF]/40"
-                />
+    {/* 1.5) See Example */}
+    <button
+      type="button"
+      onClick={async () => {
+        setQuery(EXAMPLE_ADDR);
+        if (!loading) await runScan(EXAMPLE_ADDR);
+      }}
+      className="shrink-0 rounded-xl border border-[#7B4DFF]/40 bg-white/10 px-4 py-2.5 text-white hover:bg-white/20"
+      title="Load an example wallet and scan"
+    >
+      Example
+    </button>
 
+    {/* 2) Search Bar */}
+    <input
+      type="text"
+      inputMode="search"
+      value={query}
+      onChange={(e) => setQuery(e.target.value)}
+      placeholder="Connect your wallet or check an address"
+      className="flex-1 rounded-xl border border-[#7B4DFF]/40 bg-black/40 px-4 py-2.5 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#7B4DFF]/40"
+    />
                 {/* 3) Scan Button (rightmost) */}
                 <button
                   type="submit"
@@ -640,9 +653,9 @@ function Hero({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void 
       >
         <div className="mx-auto w-full max-w-5xl pt-2 pb-1 px-2 sm:px-4">
           <ol className="space-y-3md:space-y-0 md:grid md:grid-cols-3 md:gap-8 lg:gap-8">
-            <Step n={1} title="Scan" desc="Identify empty ata accounts holding rent deposits." />
+            <Step n={1} title="Scan" desc="Identify empty ATA accounts holding rent deposits." />
             <Step n={2} title="Preview" desc="See how much SOL you can reclaim." />
-            <Step n={3} title="Claim" desc="Close ata in one click; SOL refund to your wallet." />
+            <Step n={3} title="Claim" desc="Close ATA in one click; SOL refund to your wallet." />
           </ol>
         </div>
       </div>
@@ -652,13 +665,18 @@ function Hero({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void 
 
 function TokenLogo({ meta, mint }: { meta?: TokenMeta; mint: string }) {
   if (meta?.logoURI) {
+    // Use native <img> because token logos come from arbitrary remote hosts
+    // (Next/Image requires allow-listing hosts and will error on unknown domains)
     return (
-      <Image
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
         src={meta.logoURI}
         alt={meta.symbol ?? mint}
         width={28}
         height={28}
         className="h-7 w-7 rounded-full object-cover border border-white/10"
+        referrerPolicy="no-referrer"
+        loading="lazy"
       />
     );
   }
@@ -668,6 +686,7 @@ function TokenLogo({ meta, mint }: { meta?: TokenMeta; mint: string }) {
     </div>
   );
 }
+
 
 /* ---------- tiny UI bits ---------- */
 
