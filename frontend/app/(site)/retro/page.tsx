@@ -500,7 +500,7 @@ export default function RetroPage() {
       <button
         type="button"
         onClick={async () => {
-          const demo = "5BQXc6Jiayh3rnqKeKCfSNcp7g6U9MxTrxLEv7EEGt8u";
+          const demo = "F9L6h6KQrtRHQcwfpTvo3WXT8v8GSEx42NDFznucchLK";
           setQuery(demo);
           if (!loading) await runScan(demo);
         }}
@@ -688,16 +688,16 @@ function Hero({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void 
           {/* --- Centered Plain-English ATA / Rent explainer --- */}
           <div className="mx-auto rounded-xl border border-[#7B4DFF]/30 bg-black/40 p-5 text-sm text-gray-200 text-center">
             <p className="mx-auto max-w-2xl leading-relaxed">
-              On Solana, every time an SPL token lands in your account, it is given its own sub-account called an
+              On Solana, every time an SPL or NFT token lands in your account, it is given its own sub-account called an
               <br />
               ATA (Associated Token Account). As this puts stress on the network, the system holds a small deposit in SOL.
               <br className="hidden sm:block" />
               <span className="text-cyan-300">
-                This happening is built into the blockchain at the core and happening on many levels.
+                This is built into the blockchain at the core and happening on many levels.
               </span>
               <br />
               <span className="text-[#DDA0DD]">
-                Retro is simply a tool to let you claim your deposit back from unused accounts.
+                Retro is simply a tool to let you claim your deposit back from unused accounts. In the future, we plan to offer deeper scans you help you find more.
               </span>
             </p>
 
