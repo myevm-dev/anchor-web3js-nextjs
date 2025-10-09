@@ -1,3 +1,5 @@
+/* eslint-disable @next/next/no-img-element */
+
 // app/(site)/retro/page.tsx
 "use client";
 import Image from "next/image";

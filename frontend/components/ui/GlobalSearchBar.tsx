@@ -1,33 +1,53 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { CreateVaultModal } from "./CreateVaultModal";
 
 export function GlobalSearchBar() {
   const router = useRouter();
-  const searchParams = useSearchParams();
 
-  // Hydration-safe: don't read URL on the server
   const [mounted, setMounted] = useState(false);
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-    setQ(searchParams?.get("q") ?? "");
-  }, [searchParams]);
+  useEffect(() => setMounted(true), []);
 
-  const doSearch = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const query = q.trim();
-    router.push(query ? `/?q=${encodeURIComponent(query)}` : "/");
+  function extractPair(input: string): string {
+    let s = input.trim();
+    if (!s) return "";
+
+    // If they pasted a URL (e.g. dexscreener)
+    try {
+      const u = new URL(s);
+      const parts = u.pathname.split("/").filter(Boolean);
+      if (parts.length) s = parts[parts.length - 1];
+    } catch {
+      // not a URL, keep as-is
+    }
+    // strip query/fragment just in case
+    return s.split("?")[0].split("#")[0];
+  }
+
+  const doSearch = () => {
+    const pair = extractPair(q);
+    if (!pair) {
+      router.push("/"); // keep current behavior when empty
+      return;
+    }
+    router.push(`/trade/${encodeURIComponent(pair)}`);
   };
 
-  // Solid background, no blur/alpha → no transparency
+  // Allow Enter to trigger the same navigation without form submit
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      doSearch();
+    }
+  };
+
   const wrapperClass = useMemo(
-    () =>
-      "fixed top-14 inset-x-0 z-40 border-b border-white/10 bg-black shadow-lg",
+    () => "fixed top-14 inset-x-0 z-40 border-b border-white/10 bg-black shadow-lg",
     []
   );
 
@@ -35,7 +55,8 @@ export function GlobalSearchBar() {
     <>
       <div className={wrapperClass}>
         <div className="mx-auto max-w-7xl px-4">
-          <form onSubmit={doSearch} className="h-12 flex items-center gap-3">
+          {/* Use a plain div instead of <form> to avoid default navigation */}
+          <div className="h-12 flex items-center gap-3">
             {/* Create (opens modal) */}
             <button
               type="button"
@@ -52,21 +73,22 @@ export function GlobalSearchBar() {
               <span className="hidden md:inline">Create</span>
             </button>
 
-            {/* Search input */}
+            {/* Search input (no name attr; Enter handled manually) */}
             <input
               type="search"
-              name="q"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Search vaults by mint, creator, or keyword…"
+              onKeyDown={onKeyDown}
+              placeholder="Paste DexScreener link or pair/mint…"
               className="flex-1 h-9 rounded-md bg-white/5 text-sm text-white placeholder:text-gray-400 outline-none border border-white/15 px-3 focus:border-white/30"
               suppressHydrationWarning
               readOnly={!mounted}
             />
 
-            {/* Search */}
+            {/* Search button triggers router.push directly */}
             <button
-              type="submit"
+              type="button"
+              onClick={doSearch}
               aria-label="Search"
               title="Search"
               className="w-28 md:w-32 h-9 rounded-md border border-white/15 bg-white/5 text-white text-sm hover:bg-white/10 active:scale-[0.98] transition grid place-items-center"
@@ -78,7 +100,7 @@ export function GlobalSearchBar() {
               </span>
               <span className="hidden md:inline">Search</span>
             </button>
-          </form>
+          </div>
         </div>
       </div>
 

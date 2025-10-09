@@ -6,7 +6,7 @@ export function DemoBanner() {
         <span className="inline-flex w-full items-center justify-center gap-2">
           <span className="h-2 w-2 animate-pulse rounded-full bg-yellow-300" />
           <span className="font-semibold">Demo Only</span>
-          <span className="opacity-80">· Not live yet</span>
+          <span className="opacity-80">· No Trading Yet</span>
         </span>
       </div>
     </div>
