@@ -15,7 +15,6 @@ import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import { publicKey as umiPk } from "@metaplex-foundation/umi";
 import { fetchMetadataFromSeeds } from "@metaplex-foundation/mpl-token-metadata";
-import Image from "next/image";
 
 /* ---------- constants ---------- */
 const TOKEN_PROGRAM_ID = new PublicKey(
