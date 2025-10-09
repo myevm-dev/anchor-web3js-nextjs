@@ -1,3 +1,4 @@
+import Image from "next/image";
 export default function AboutPage() {
   return (
     <div className="relative min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-black">
@@ -25,14 +26,33 @@ export default function AboutPage() {
           </Card>
 
           {/* Timeline / Steps */}
-          <Card className="p-6 sm:p-7">
-            <h3 className="text-cyan-300/90 font-semibold">Creator flow</h3>
-            <ol className="mt-4 space-y-4">
-              <Step n={1} title="Click Create & Paste Mint Address" desc="This is the SPL mint address for your token." />
-              <Step n={2} title="Enter Amount of Rewards" desc="Enter the total tokens to distribute over the term." />
-              <Step n={3} title="Go Live by Clicking Create Vault" desc="0.1 SOL + 3% token fee. Vault starts streaming instantly." />
-            </ol>
-          </Card>
+<Card className="p-6 sm:p-7">
+  <div className="flex flex-col md:flex-row items-center gap-6 md:gap-10">
+    {/* Image (ZymoThrow) */}
+    <div className="order-1 md:order-none flex justify-center md:justify-end md:basis-[44%] md:pl-2 lg:pl-4">
+      <Image
+        src="/images/zymothrow.png"
+        alt="ZymoThrow mascot"
+        width={420}
+        height={420}
+        className="w-full max-w-[380px] md:max-w-[420px] h-auto object-contain"
+        priority
+      />
+    </div>
+
+    {/* Text + Steps */}
+    <div className="flex-1 md:basis-[50%] md:pl-10 lg:pl-14">
+      <h3 className="text-cyan-300/90 font-semibold">Creator flow</h3>
+      <ol className="mt-4 space-y-4">
+        <Step n={1} title="Click Create & Paste Mint Address" desc="This is the SPL mint address for your token." />
+        <Step n={2} title="Enter Amount of Rewards" desc="Enter the total tokens to distribute over the term." />
+        <Step n={3} title="Go Live by Clicking Create Vault" desc="0.1 SOL + 3% token fee. Vault starts streaming instantly." />
+      </ol>
+    </div>
+  </div>
+</Card>
+
+
         </section>
 
         {/* Two columns: Creators & Stakers */}
@@ -61,6 +81,40 @@ export default function AboutPage() {
             </div>
           </Card>
         </section>
+        <section className="mt-6">
+  <Card>
+    <div className="flex flex-col md:flex-row items-center gap-5 md:gap-4">
+  {/* Text (left) */}
+  <div className="flex-1 md:basis-[60%] md:pr-3">
+    <h3 className="text-cyan-300/90 font-semibold">Tips</h3>
+    <div className="mt-3">
+      <UL>
+        <LI>Claiming and re-staking may increase your share if others don’t.</LI>
+        <LI>Keep a little <b>SOL</b> in your wallet for tx fees when creating/claiming/unstaking.</LI>
+        <LI>APR will change as TVL moves; <b>more stakers → lower APR</b>, fewer stakers → higher APR.</LI>
+        <LI>Claiming rewards doesn’t unstake; you can <b>claim and stay staked</b> to keep earning.</LI>
+      </UL>
+      <p className="mt-6 text-xs text-gray-500">
+        Always verify the mint address you interact with.
+      </p>
+    </div>
+  </div>
+
+  {/* Image (right; tucked closer) */}
+  <div className="order-1 md:order-none flex justify-center md:justify-start md:basis-[35%] md:-ml-2">
+    <Image
+      src="/images/zymoflask.png"
+      alt="ZymoFlask"
+      width={220}
+      height={220}
+      className="w-full max-w-[200px] md:max-w-[220px] h-auto object-contain"
+    />
+  </div>
+</div>
+  </Card>
+</section>
+
+
 
         {/* Fees + Rules */}
         <section className="mt-6 grid gap-6 lg:grid-cols-[1.1fr,0.9fr]">
@@ -90,24 +144,7 @@ export default function AboutPage() {
           </Card>
         </section>
 
-        {/* Tips */}
-        <section className="mt-6">
-          <Card>
-            <h3 className="text-cyan-300/90 font-semibold">Tips</h3>
-            <div className="mt-3">
-              <UL>
-                <LI>Claiming and re-staking may increase your share if others don’t.</LI>
-               
-                <LI>Keep a little <b>SOL</b> in your wallet for tx fees when creating/claiming/unstaking.</LI>
-                <LI>APR will change as TVL moves; <b>more stakers → lower APR</b>, fewer stakers → higher APR.</LI>
-                <LI>Claiming rewards doesn’t unstake; you can <b>claim and stay staked</b> to keep earning.</LI>
-              </UL>
-              <p className="mt-6 text-xs text-gray-500">
-                Always verify the mint address you interact with.
-              </p>
-            </div>
-          </Card>
-        </section>
+        
       </main>
     </div>
   );
