@@ -1,16 +1,15 @@
-// app/(site)/_components/NavBar.tsx (or wherever this file lives)
+// app/(site)/_components/NavBar.tsx
 "use client";
 
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { WalletButton } from "../WalletButton";
-import { Home, Settings2, Info, Radar } from "lucide-react";
+import { Home, Settings2, Info, Radar, CandlestickChart } from "lucide-react"; // ← add CandlestickChart
 
 type Badge = { label: string; color: "green" | "red" | "purple" };
 
 function badgeClass(color: Badge["color"]) {
-  // ultra-small, uppercase, tight line-height, strong glow
   const base =
     "mt-0.5 inline-block text-[8px] leading-[8px] font-semibold uppercase tracking-[0.22em]";
   const green =
@@ -19,9 +18,7 @@ function badgeClass(color: Badge["color"]) {
     "text-rose-400 [filter:drop-shadow(0_0_3px_rgba(244,63,94,0.95))_drop-shadow(0_0_6px_rgba(244,63,94,0.65))]";
   const purple =
     "text-violet-300 [filter:drop-shadow(0_0_3px_rgba(167,139,250,0.95))_drop-shadow(0_0_6px_rgba(167,139,250,0.65))]";
-  return `${base} ${
-    color === "green" ? green : color === "red" ? red : purple
-  }`;
+  return `${base} ${color === "green" ? green : color === "red" ? red : purple}`;
 }
 
 function TopLink({
@@ -76,14 +73,14 @@ function MobileLink({
       <Icon size={18} strokeWidth={2.2} />
       <span className="mt-1 text-[11px] leading-none">{label}</span>
       <span
-  className={
-    badge
-      ? badgeClass(badge.color)
-      : "mt-0.5 inline-block text-[8px] leading-[8px] font-semibold uppercase tracking-[0.22em] opacity-0"
-  }
->
-  {badge?.label ?? "\u00A0"}
-</span>
+        className={
+          badge
+            ? badgeClass(badge.color)
+            : "mt-0.5 inline-block text-[8px] leading-[8px] font-semibold uppercase tracking-[0.22em] opacity-0"
+        }
+      >
+        {badge?.label ?? "\u00A0"}
+      </span>
     </Link>
   );
 }
@@ -99,7 +96,34 @@ export function NavBar() {
           <div className="h-14 flex items-center justify-between gap-4">
             {/* brand */}
             <div className={`flex items-center gap-3 ${BTN_H}`}>
-              <Link href="/" className="flex items-center gap-2 text-white font-semibold tracking-wide">
+              {/* Mobile: brand → /about */}
+              <Link
+                href="/about"
+                className="flex md:hidden items-center gap-2 text-white font-semibold tracking-wide"
+                aria-label="Go to About"
+              >
+                <Image
+                  src="/images/dripletlogo.png"
+                  alt="Driplet.Fun"
+                  width={40}
+                  height={40}
+                  className="h-10 w-auto"
+                  priority
+                />
+                <span className="leading-none text-[22px]">
+                  <span>Driplet</span>
+                  <span className="ml-1 bg-[linear-gradient(90deg,#5DE6FF_0%,#A685FA_45%,#FF6DFD_100%)] bg-clip-text text-transparent">
+                    .Fun
+                  </span>
+                </span>
+              </Link>
+
+              {/* Desktop: brand → / */}
+              <Link
+                href="/"
+                className="hidden md:flex items-center gap-2 text-white font-semibold tracking-wide"
+                aria-label="Go to Home"
+              >
                 <Image
                   src="/images/dripletlogo.png"
                   alt="Driplet.Fun"
@@ -116,16 +140,18 @@ export function NavBar() {
                 </span>
               </Link>
             </div>
-
             {/* center links (desktop only) */}
             <div className="hidden md:flex items-center gap-6 text-lg">
               <TopLink href="/retro" exact badge={{ label: "LIVE", color: "green" }}>
                 Retro
               </TopLink>
+              <TopLink href="/trade" badge={{ label: "SOON", color: "red" }}>
+                Trade
+              </TopLink>
               <TopLink href="/" exact badge={{ label: "SOON", color: "red" }}>
                 Vaults
               </TopLink>
-              {/* <TopLink href="/trade">Trade</TopLink>  // TEMP disabled */}
+
               <TopLink href="/manage" badge={{ label: "SOON", color: "red" }}>
                 Manage
               </TopLink>
@@ -161,6 +187,12 @@ export function NavBar() {
               exact
               badge={{ label: "LIVE", color: "green" }}
             />
+                        <MobileLink
+              href="/trade"
+              label="Trade"
+              Icon={CandlestickChart}
+              badge={{ label: "SOON", color: "red" }}
+            />
             <MobileLink
               href="/"
               label="Vaults"
@@ -168,19 +200,14 @@ export function NavBar() {
               exact
               badge={{ label: "SOON", color: "red" }}
             />
-            {/* <MobileLink href="/trade" label="Trade" Icon={CandlestickChart} /> */}
+
             <MobileLink
               href="/manage"
               label="Manage"
               Icon={Settings2}
               badge={{ label: "SOON", color: "red" }}
             />
-            <MobileLink
-              href="/about"
-              label="About"
-              Icon={Info}
-              badge={{ label: "DRIPLET", color: "purple" }}
-            />
+            {/* About would make it 5 icons; keep 4 for symmetry on mobile */}
           </div>
         </div>
       </nav>
