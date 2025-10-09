@@ -11,10 +11,11 @@ import { createUmi } from "@metaplex-foundation/umi-bundle-defaults";
 import { publicKey as umiPk, type Umi } from "@metaplex-foundation/umi";
 import { fetchMetadataFromSeeds } from "@metaplex-foundation/mpl-token-metadata";
 import { DemoBanner } from "@/components/ui/DemoBanner";
+import { CreateVaultModal } from "@/components/ui/CreateVaultModal";
 
 // --- CONFIG ---
 const MINTS: string[] = [
- "4VwJLikGQ5N59BRzxyaZZjLiB38r6HF4mJ1mU8fjbonk",
+  "4VwJLikGQ5N59BRzxyaZZjLiB38r6HF4mJ1mU8fjbonk",
   "9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump",
   "2T6vwSajccRRb4roAdqZqgZhtWdPqVQm8kjDUrSqMray",
 ];
@@ -95,10 +96,12 @@ export default function ManagePage() {
   const { connection } = useConnection();
   const [items, setItems] = useState<ManageVault[]>([]);
   const [loading, setLoading] = useState(false);
+  const [openCreate, setOpenCreate] = useState(false);
 
   const umi = useMemo(() => {
     const ep = connection as unknown as MaybeEndpoint;
-    const endpoint = ep.rpcEndpoint ?? ep._rpcEndpoint ?? "https://api.mainnet-beta.solana.com";
+    const endpoint =
+      ep.rpcEndpoint ?? ep._rpcEndpoint ?? "https://api.mainnet-beta.solana.com";
     return createUmi(endpoint);
   }, [connection]);
 
@@ -141,6 +144,28 @@ export default function ManagePage() {
     };
   }, [umi]);
 
+  // called by modal when user confirms
+  const handleCreateSubmit = async (data: { mint: string; rewardAmount: string }) => {
+    const now = Math.floor(Date.now() / 1000);
+    const display = await fetchMintDisplay(umi, data.mint);
+
+    // append a new row optimistically (rewardNet uses user's input; staked starts at 0)
+    setItems((prev) => [
+      {
+        mint: data.mint,
+        name: display.name,
+        symbol: display.symbol || undefined,
+        image: normalizeIpfs(display.image),
+        status: "active",
+        startTime: now,
+        endTime: now + TERM_SECS,
+        rewardNet: Number((data.rewardAmount || "0").replace(/,/g, "")) || 0,
+        totalStaked: 0,
+      },
+      ...prev,
+    ]);
+  };
+
   return (
     <div className="relative min-h-screen bg-gradient-to-b from-gray-950 via-gray-900 to-black">
       <div className="pointer-events-none absolute inset-0 bg-[url('/grid.svg')] bg-center opacity-10 [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]" />
@@ -148,15 +173,19 @@ export default function ManagePage() {
       <main className="relative z-10 mx-auto max-w-7xl px-4 pt-0 pb-16">
         <header className="mb-2 mt-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-3xl md:text-4xl font-semibold text-[#1DBAFC]">Manage Vaults</h1>
-            <Link
-              href="/create"
+            <h1 className="text-3xl md:text-4xl font-semibold text-[#1DBAFC]">
+              Manage Vaults
+            </h1>
+
+            {/* OPEN MODAL BUTTON (replaces /create link) */}
+            <button
+              onClick={() => setOpenCreate(true)}
               className="h-12 px-6 rounded-md border border-white/15 bg-white/5 text-sm text-white hover:bg-white/10 grid place-items-center whitespace-nowrap"
             >
               Create New
-            </Link>
+            </button>
           </div>
-               <DemoBanner />
+          <DemoBanner />
         </header>
 
         <section className="mt-6">
@@ -179,6 +208,13 @@ export default function ManagePage() {
           </div>
         </section>
       </main>
+
+      {/* MODAL MOUNT */}
+      <CreateVaultModal
+        open={openCreate}
+        onOpenChange={setOpenCreate}
+        onSubmit={handleCreateSubmit}
+      />
     </div>
   );
 }
