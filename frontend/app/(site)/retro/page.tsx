@@ -660,13 +660,11 @@ function Hero({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void 
     <>
       <div className="text-center">
         <div className="text-3xl text-cyan-300/90 font-medium tracking-wide mt-0">RETRO</div>
-        <h1 className="mt-1 text-3xl sm:text-4xl font-semibold text-white">
-          Scan & reclaim your locked SOL
+        <h1 className="mt-1 text-2xl sm:text-4xl font-semibold text-white">
+          Reclaim your Locked SOL
         </h1>
-        <p className="mx-auto mt-2 max-w-3xl text-[#DDA0DD]">
-          We search your wallet for empty token accounts (ATAs) and other closeable accounts,
-          <br /> then let you reclaim the rent deposits in one click.{" "}
-          <span className="text-emerald-300">Free service.</span>
+        <p className="mx-auto text-lg mt-2 max-w-3xl text-[#00FFA3]">
+          We search your wallet for empty ATAs & let you claim the rent deposits in one click.
         </p>
 
         <button
