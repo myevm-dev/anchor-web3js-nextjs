@@ -3,7 +3,7 @@
 // app/(site)/retro/page.tsx
 "use client";
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   Connection,
   PublicKey,
@@ -22,6 +22,8 @@ import { fetchMetadataFromSeeds } from "@metaplex-foundation/mpl-token-metadata"
 const TOKEN_PROGRAM_ID = new PublicKey(
   "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 );
+
+
 const RPC =
   process.env.NEXT_PUBLIC_SOLANA_RPC ?? "https://api.mainnet-beta.solana.com";
 const MAX_CLOSES_PER_TX = 8;
@@ -215,7 +217,26 @@ async function confirmByPolling(
     await new Promise((r) => setTimeout(r, pollMs));
   }
 }
-
+function useSolPrice() {
+  const [solPrice, setSolPrice] = useState<number | null>(null);
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const r = await fetch(
+          "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd",
+          { cache: "no-store" }
+        );
+        const j = await r.json();
+        if (alive) setSolPrice(Number(j?.solana?.usd) || null);
+      } catch {
+        if (alive) setSolPrice(null);
+      }
+    })();
+    return () => { alive = false; };
+  }, []);
+  return solPrice;
+}
 /* ---------- page ---------- */
 
 export default function RetroPage() {
@@ -230,11 +251,14 @@ export default function RetroPage() {
   const [error, setError] = useState<string | null>(null);
   const [metaWarn, setMetaWarn] = useState<string | null>(null);
   const [rows, setRows] = useState<ClosableAccount[]>([]);
-
+  const solPrice = useSolPrice();
   const { connection: connectionFromAdapter } = useConnection();
   const { publicKey, sendTransaction } = useWallet();
   const connectedAddress = publicKey?.toBase58() ?? "";
-
+  const claimableUsd = useMemo(() => {
+    if (claimableSol == null || solPrice == null) return null;
+    return (claimableSol * solPrice).toFixed(2);
+  }, [claimableSol, solPrice]);
   // Umi based on the current RPC used by the wallet adapter (fallback to env)
   const umi = useMemo(() => {
     const ep = connectionFromAdapter as unknown as MaybeEndpoint;
@@ -567,17 +591,23 @@ export default function RetroPage() {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleClaimAll}
-                    disabled={!canClaim || rows.length === 0}
-                    className="rounded-xl border border-emerald-400/40 bg-emerald-400/15 px-4 py-2.5 text-emerald-200 hover:bg-emerald-400/25 disabled:opacity-50"
-                    title={canClaim ? "Close all empty token accounts" : "Connect the scanned wallet to claim"}
-                  >
-                    Close/Claim All{rows.length ? ` (${rows.length})` : ""}
-                  </button>
-                </div>
+                <div className="flex items-center gap-4">
+  {claimableUsd && (
+    <div className="text-lg text-gray-300">
+      ≈ <span className="text-emerald-300 font-semibold">${claimableUsd}</span> claimable
+    </div>
+  )}
+  <button
+    type="button"
+    onClick={handleClaimAll}
+    disabled={!canClaim || rows.length === 0}
+    className="rounded-xl border border-emerald-400/40 bg-emerald-400/15 px-4 py-2.5 text-emerald-200 hover:bg-emerald-400/25 disabled:opacity-50"
+    title={canClaim ? "Close all empty token accounts" : "Connect the scanned wallet to claim"}
+  >
+    Close/Claim All{rows.length ? ` (${rows.length})` : ""}
+  </button>
+</div>
+
               </div>
             </div>
 
