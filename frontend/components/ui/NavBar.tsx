@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { WalletButton } from "../WalletButton";
-import { Home, Settings2, Info, Radar, CandlestickChart } from "lucide-react"; // ← add CandlestickChart
+import { Home, Settings2, Radar, CandlestickChart } from "lucide-react"; // ← add CandlestickChart
 
 type Badge = { label: string; color: "green" | "red" | "purple" };
 

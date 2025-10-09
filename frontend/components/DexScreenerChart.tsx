@@ -8,7 +8,7 @@ type Props = {
 
 export default function DexScreenerChart({
   pairAddress,
-  height = 640,
+  height = 500,
   showTrades = false,
 }: Props) {
   const src = `https://dexscreener.com/solana/${encodeURIComponent(

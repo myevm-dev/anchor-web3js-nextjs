@@ -28,7 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <GlobalSearchBar />
           </Suspense>
 
-          <div className="pt-[120px] pb-20 md:pb-0">
+          <div className="pt-[110px] pb-20 md:pb-0">
        
 
             <Suspense fallback={null}>{children}</Suspense>
