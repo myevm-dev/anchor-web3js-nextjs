@@ -587,7 +587,7 @@ export default function RetroPage() {
                 <div>
                   <h3 className="text-cyan-300/90 font-semibold">Closable token accounts</h3>
                   <p className="mt-1 text-sm text-gray-300">
-                    Zero-balance SPL token accounts detected for this address. Each refunds its rent deposit on close.
+                    Zero-balance SPL/NFT token accounts detected for this address. Each refunds its rent deposit on close.
                   </p>
                 </div>
 
