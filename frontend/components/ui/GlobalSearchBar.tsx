@@ -79,7 +79,7 @@ export function GlobalSearchBar() {
               value={q}
               onChange={(e) => setQ(e.target.value)}
               onKeyDown={onKeyDown}
-              placeholder="Paste DexScreener link or pair/mint…"
+              placeholder="Search Token/Vault/Pool"
               className="flex-1 h-9 rounded-md bg-white/5 text-sm text-white placeholder:text-gray-400 outline-none border border-white/15 px-3 focus:border-white/30"
               suppressHydrationWarning
               readOnly={!mounted}
