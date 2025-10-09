@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+
 import ManageVaultCard, { ManageVault } from "@/components/ui/ManageVaultCard";
 
 import { useConnection } from "@solana/wallet-adapter-react";
