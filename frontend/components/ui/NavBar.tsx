@@ -1,3 +1,4 @@
+// app/(site)/_components/NavBar.tsx (or wherever this file lives)
 "use client";
 
 import Link from "next/link";
@@ -6,9 +7,9 @@ import { usePathname } from "next/navigation";
 import { WalletButton } from "../WalletButton";
 import { Home, Settings2, Info, Radar } from "lucide-react";
 
-type Badge = { label: string; color: "green" | "red" };
+type Badge = { label: string; color: "green" | "red" | "purple" };
 
-function badgeClass(color: "green" | "red") {
+function badgeClass(color: Badge["color"]) {
   // ultra-small, uppercase, tight line-height, strong glow
   const base =
     "mt-0.5 inline-block text-[8px] leading-[8px] font-semibold uppercase tracking-[0.22em]";
@@ -16,7 +17,11 @@ function badgeClass(color: "green" | "red") {
     "text-emerald-400 [filter:drop-shadow(0_0_3px_rgba(16,185,129,0.95))_drop-shadow(0_0_6px_rgba(16,185,129,0.65))]";
   const red =
     "text-rose-400 [filter:drop-shadow(0_0_3px_rgba(244,63,94,0.95))_drop-shadow(0_0_6px_rgba(244,63,94,0.65))]";
-  return `${base} ${color === "green" ? green : red}`;
+  const purple =
+    "text-violet-300 [filter:drop-shadow(0_0_3px_rgba(167,139,250,0.95))_drop-shadow(0_0_6px_rgba(167,139,250,0.65))]";
+  return `${base} ${
+    color === "green" ? green : color === "red" ? red : purple
+  }`;
 }
 
 function TopLink({
@@ -116,7 +121,9 @@ export function NavBar() {
               <TopLink href="/manage" badge={{ label: "SOON", color: "red" }}>
                 Manage
               </TopLink>
-              <TopLink href="/about">About</TopLink>
+              <TopLink href="/about" badge={{ label: "DRIPLET", color: "purple" }}>
+                About
+              </TopLink>
             </div>
 
             {/* RIGHT: wallet */}
@@ -160,7 +167,12 @@ export function NavBar() {
               Icon={Settings2}
               badge={{ label: "SOON", color: "red" }}
             />
-            <MobileLink href="/about" label="About" Icon={Info} />
+            <MobileLink
+              href="/about"
+              label="About"
+              Icon={Info}
+              badge={{ label: "DRIPLET", color: "purple" }}
+            />
           </div>
         </div>
       </nav>
