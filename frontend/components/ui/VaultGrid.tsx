@@ -33,9 +33,9 @@ export default function VaultGrid({
       md:grid-cols-3
       lg:grid-cols-4`}
     >
-      {items.map((v, i) => (
-        <VaultCard key={`${v.mint}-${i}`} v={v} onClick={() => onSelect?.(v)} />
-      ))}
+    {items.map((v, i) => (
+      <VaultCard key={`${v.mint}-${i}`} v={v} onClick={() => onSelect?.(v)} />
+    ))}
     </div>
   );
 }

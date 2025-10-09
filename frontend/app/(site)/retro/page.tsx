@@ -24,7 +24,6 @@ const TOKEN_PROGRAM_ID = new PublicKey(
 const RPC =
   process.env.NEXT_PUBLIC_SOLANA_RPC ?? "https://api.mainnet-beta.solana.com";
 const MAX_CLOSES_PER_TX = 8;
-const EXAMPLE_ADDR = "5BQXc6Jiayh3rnqKeKCfSNcp7g6U9MxTrxLEv7EEGt8u";
 
 /* ---------- types ---------- */
 type MaybeEndpoint = { rpcEndpoint?: string; _rpcEndpoint?: string };

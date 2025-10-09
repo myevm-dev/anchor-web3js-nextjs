@@ -13,12 +13,15 @@ import { DemoBanner } from "@/components/ui/DemoBanner";
 
 const TERM_SECS = 15_724_800; // 6 months
 
+
 const MINTS = [
   "J2eaKn35rp82T6RFEsNK9CLRHEKV9BLXjedFM3q6pump",
   "8Y5MwnUM19uqhnsrFnKijrmn33CmHBTUoedXtTGDpump",
+    "FQrNCk7HkXFEThzbtpdxqX5KaifLXAnPzseWXvksbonk",
   "34AeqX5MQGyrey2VnZdkeZCfM4qinp4F3X7pGxtipump",
   "9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump",
-  "FQrNCk7HkXFEThzbtpdxqX5KaifLXAnPzseWXvksbonk",
+
+
 ];
 
 // demo numbers for rewards/TVL

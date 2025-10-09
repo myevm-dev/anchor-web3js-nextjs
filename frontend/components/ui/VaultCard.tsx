@@ -63,6 +63,10 @@ export default function VaultCard({
 
   const launchpad = detectLaunchpad(v.mint);
   const perDay = (v.emissionPerSec ?? 0) * 86400;
+   const lpColor =
+    launchpad.kind === "pump" ? "#83efaa" :
+    launchpad.kind === "bonk" ? "#fe5e1f" :
+    "#18bdfd";
 
   const nameNode =
     launchpad.kind === "pump" && launchpad.link ? (
@@ -77,9 +81,14 @@ export default function VaultCard({
   const stop = (e: React.MouseEvent) => e.stopPropagation();
 
   return (
-    <div
+     <div
       onClick={onClick}
-      className="group rounded-xl border border-white/10 bg-zinc-950/70 hover:bg-zinc-900/70 transition shadow-sm overflow-hidden cursor-pointer"
+      className="group rounded-xl border-2 bg-zinc-950/70 hover:bg-zinc-900/70 transition shadow-sm overflow-hidden cursor-pointer"
+      style={{
+        borderColor: lpColor,
+        // subtle 1px outer glow using same hue (optional)
+        boxShadow: `0 0 0 1px ${lpColor}22`,
+      }}
     >
       {/* media */}
       <div className="relative aspect-[16/9] bg-white/5">

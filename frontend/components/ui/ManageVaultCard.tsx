@@ -27,10 +27,7 @@ function shortAddr(a: string) {
 function normalizeImageUrl(url?: string) {
   if (!url) return "";
   let u = url.trim();
-  if (u.startsWith("ipfs://")) {
-    const cid = u.replace("ipfs://", "");
-    u = `https://ipfs.io/ipfs/${cid}`;
-  }
+  if (u.startsWith("ipfs://")) u = `https://ipfs.io/ipfs/${u.replace("ipfs://", "")}`;
   return u;
 }
 
@@ -55,8 +52,11 @@ export default function ManageVaultCard({
       : "active");
 
   const launchpad = detectLaunchpad(v.mint);
+  const lpColor =
+    launchpad.kind === "pump" ? "#83efaa" :
+    launchpad.kind === "bonk" ? "#fe5e1f" :
+    "#18bdfd";
 
-  // emission (demo, mirrors your prior logic)
   const perSec = v.rewardNet != null ? v.rewardNet / (182 * 24 * 60 * 60) : undefined;
   const perDay = perSec != null ? perSec * 86400 : undefined;
 
@@ -64,12 +64,12 @@ export default function ManageVaultCard({
 
   return (
     <div
-      className="
-        group rounded-xl overflow-hidden
-        border bg-[#0b0f14] transition shadow-sm
-        border-[#7B4DFF]/40 shadow-[0_0_0_1px_rgba(123,77,255,0.08)]
-        hover:border-[#7B4DFF]/60
-      "
+      onClick={() => {}}
+      className="group rounded-xl border-2 bg-zinc-950/70 hover:bg-zinc-900/70 transition shadow-sm overflow-hidden cursor-pointer"
+      style={{
+        borderColor: lpColor,
+        boxShadow: `0 0 0 1px ${lpColor}22`,
+      }}
     >
       {/* media */}
       <div className="relative aspect-[16/9] bg-white/5">
@@ -88,7 +88,7 @@ export default function ManageVaultCard({
           </div>
         )}
 
-        {/* status pill with solid black backing */}
+        {/* status pill */}
         <div className="absolute left-2 top-2 z-10">
           <div className="rounded-md bg-black p-0.5">
             <div
@@ -113,15 +113,9 @@ export default function ManageVaultCard({
         <div className="flex items-center gap-2">
           {launchpad.logoSrc && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={launchpad.logoSrc}
-              alt={launchpad.kind || "launchpad"}
-              className="h-4 w-4 rounded-sm"
-            />
+            <img src={launchpad.logoSrc} alt={launchpad.kind || "launchpad"} className="h-4 w-4 rounded-sm" />
           )}
-          <div className="font-semibold text-white truncate">
-            {v.name || "Unnamed"}
-          </div>
+          <div className="font-semibold text-white truncate">{v.name || "Unnamed"}</div>
         </div>
 
         {/* symbol • short address */}
@@ -146,7 +140,7 @@ export default function ManageVaultCard({
           </Link>
         </div>
 
-        {/* metrics (styled like VaultCard) */}
+        {/* metrics */}
         <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
           <div className="rounded border p-2 bg-[#0f131a] border-[#7B4DFF]/30">
             <div className="text-gray-400">Rewards (net)</div>
@@ -171,16 +165,15 @@ export default function ManageVaultCard({
           </div>
         </div>
 
-        {/* footer (match spacing/typography) */}
+        {/* footer */}
         <div className="mt-3 flex items-center justify-between">
           <div className="text-xs text-gray-400">
             {v.startTime && v.endTime ? "180 days left • fixed" : "Fixed term"}
           </div>
-          {/* Mgmt cards don’t show APR; keep right side clean */}
-          <div className="text-xs text-gray-400"></div>
+          <div className="text-xs text-gray-400" />
         </div>
 
-        {/* actions (styled like VaultCard buttons) */}
+        {/* actions */}
         <div className="mt-3 grid grid-cols-3 gap-2">
           <button
             onClick={(e) => {
@@ -194,16 +187,16 @@ export default function ManageVaultCard({
           </button>
 
           <button
-  onClick={(e) => {
-    e.stopPropagation();
-    onBoost?.(v.mint);
-  }}
-  disabled
-  className="h-9 rounded-md border border-cyan-500/40 bg-cyan-500/15 text-cyan-200 text-sm hover:bg-cyan-500/25 cursor-not-allowed"
-  title="Boost not implemented"
->
-  Boost
-</button>
+            onClick={(e) => {
+              e.stopPropagation();
+              onBoost?.(v.mint);
+            }}
+            disabled
+            className="h-9 rounded-md border border-cyan-500/40 bg-cyan-500/15 text-cyan-200 text-sm hover:bg-cyan-500/25 cursor-not-allowed"
+            title="Boost not implemented"
+          >
+            Boost
+          </button>
 
           <button
             onClick={(e) => {

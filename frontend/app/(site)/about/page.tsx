@@ -192,14 +192,6 @@ function Step({ n, title, desc }: { n: number; title: string; desc: string }) {
 }
 
 
-function Badge({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="rounded-md border border-[#7B4DFF]/40 bg-white/5 px-2 py-1 text-[11px] text-gray-200">
-      {children}
-    </span>
-  );
-}
-
 function UL({ children }: { children: React.ReactNode }) {
   return <ul className="mt-1 space-y-2 text-gray-200 text-sm">{children}</ul>;
 }
