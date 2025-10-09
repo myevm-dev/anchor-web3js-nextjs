@@ -732,7 +732,7 @@ function TokenLogo({ meta, mint }: { meta?: TokenMeta; mint: string }) {
     // Use native <img> because token logos come from arbitrary remote hosts
     // (Next/Image requires allow-listing hosts and will error on unknown domains)
     return (
-      // eslint-disable-next-line @next/next/no-img-element
+ 
       <img
         src={meta.logoURI}
         alt={meta.symbol ?? mint}
