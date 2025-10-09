@@ -82,69 +82,66 @@ export default function AboutPage() {
           </Card>
         </section>
         <section className="mt-6">
-  <Card>
-    <div className="flex flex-col md:flex-row items-center gap-5 md:gap-4">
-  {/* Text (left) */}
-  <div className="flex-1 md:basis-[60%] md:pr-3">
-    <h3 className="text-cyan-300/90 font-semibold">Tips</h3>
-    <div className="mt-3">
-      <UL>
-        <LI>Claiming and re-staking may increase your share if others don’t.</LI>
-        <LI>Keep a little <b>SOL</b> in your wallet for tx fees when creating/claiming/unstaking.</LI>
-        <LI>APR will change as TVL moves; <b>more stakers → lower APR</b>, fewer stakers → higher APR.</LI>
-        <LI>Claiming rewards doesn’t unstake; you can <b>claim and stay staked</b> to keep earning.</LI>
-      </UL>
-      <p className="mt-6 text-xs text-gray-500">
-        Always verify the mint address you interact with.
-      </p>
-    </div>
-  </div>
-
-  {/* Image (right; tucked closer) */}
-  <div className="order-1 md:order-none flex justify-center md:justify-start md:basis-[35%] md:-ml-2">
-    <Image
-      src="/images/zymoflask.png"
-      alt="ZymoFlask"
-      width={220}
-      height={220}
-      className="w-full max-w-[200px] md:max-w-[220px] h-auto object-contain"
-    />
-  </div>
-</div>
-  </Card>
-</section>
-
-
-
-        {/* Fees + Rules */}
-        <section className="mt-6 grid gap-6 lg:grid-cols-[1.1fr,0.9fr]">
           <Card>
-            <h3 className="text-cyan-300/90 font-semibold">Fees</h3>
+            <div className="flex flex-col md:flex-row items-center gap-5 md:gap-4">
+          {/* Text (left) */}
+          <div className="flex-1 md:basis-[60%] md:pr-3">
+            <h3 className="text-cyan-300/90 font-semibold">Tips</h3>
             <div className="mt-3">
               <UL>
-                <LI>Creation: <b>0.1 SOL</b> (one-time).</LI>
-                <LI>Token fee: <b>3%</b> of the reward deposit (taken at creation).</LI>
-                <LI>No ongoing protocol fees or rent to worry about.</LI>
+                <LI>Claiming and re-staking may increase your share if others don’t.</LI>
+                <LI>Keep a little <b>SOL</b> in your wallet for tx fees when creating/claiming/unstaking.</LI>
+                <LI>APR will change as TVL moves; <b>more stakers → lower APR</b>, fewer stakers → higher APR.</LI>
+                <LI>Claiming rewards doesn’t unstake; you can <b>claim and stay staked</b> to keep earning.</LI>
               </UL>
+              <p className="mt-6 text-xs text-gray-500">
+                Always verify the mint address you interact with.
+              </p>
             </div>
-          </Card>
+          </div>
 
-          <Card>
-            <h3 className="text-cyan-300/90 font-semibold">Immutable Rules</h3>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Badge>Fixed 182 days</Badge>
-              <Badge>Prefunded rewards</Badge>
-              <Badge>No admin knobs</Badge>
-              <Badge>No top-ups</Badge>
-            </div>
-            <p className="mt-4 text-sm text-gray-300">
-              The vault contract is designed to be predictable and trust-minimized: once launched, parameters
-              can’t be changed.
-            </p>
+          {/* Image (right; tucked closer) */}
+          <div className="order-1 md:order-none flex justify-center md:justify-start md:basis-[35%] md:-ml-2">
+            <Image
+              src="/images/zymoflask.png"
+              alt="ZymoFlask"
+              width={220}
+              height={220}
+              className="w-full max-w-[200px] md:max-w-[220px] h-auto object-contain"
+            />
+          </div>
+        </div>
           </Card>
         </section>
 
-        
+
+
+        {/* Fees + Rules (side-by-side, same style) */}
+      <section className="mt-6 grid gap-6 md:grid-cols-2">
+        <Card>
+          <h3 className="text-cyan-300/90 font-semibold">Fees</h3>
+          <div className="mt-3">
+            <UL>
+              <LI>Creation: <b>0.1 SOL</b> (one-time).</LI>
+              <LI>Token fee: <b>3%</b> of the reward deposit (taken at creation).</LI>
+              <LI>No ongoing protocol fees or rent to worry about.</LI>
+            </UL>
+          </div>
+        </Card>
+
+        <Card>
+          <h3 className="text-cyan-300/90 font-semibold">Immutable Rules</h3>
+          <div className="mt-3">
+            <UL>
+              <LI>Fixed term of <b>182 days</b> from creation.</LI>
+              <LI>Rewards are <b>prefunded</b> and streamed per second.</LI>
+              <LI><b>No admin knobs</b>: no pause, no edits, no top-ups.</LI>
+            </UL>
+          </div>
+        </Card>
+      </section>
+
+              
       </main>
     </div>
   );
