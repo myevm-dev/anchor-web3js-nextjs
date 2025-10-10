@@ -1,15 +1,13 @@
 use anchor_lang::prelude::*;
-use anchor_lang::prelude::pubkey;
+use solana_program::pubkey;
 use anchor_lang::solana_program::{program::invoke, system_instruction};
 use anchor_spl::token::accessor;
-
 use anchor_spl::{
     associated_token::AssociatedToken,
     token::{self, CloseAccount, Mint, Token, TokenAccount, Transfer},
 };
 
-
-declare_id!("34xBrAAR7HG8xhUvKotsz4wCb6dFfucRN2Vw25zzkw99");
+declare_id!("DzDtMwhFDexPAkwRRZVYf9YjArbokm2V8aRghWZMYa8S");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -19,31 +17,53 @@ const CREATION_FEE_LAMPORTS: u64 = 100_000_000; // 0.1 SOL
 const FEE_BPS: u64 = 300; // 3%
 const RPT_SCALE: u128 = 1_000_000_000_000; // 1e12 (acc_reward_per_token precision)
 const RATE_SCALE: u128 = 1_000_000_000_000; // 1e12 (fractional tokens/sec)
-
-// Hardcode your dev treasury (SOL receiver). Token fee (3%) goes to its ATA.
-pub const DEV_TREASURY: Pubkey = pubkey!("PpokPuQ4zhMkTc8B376acPzAXiVZTaakWjqMaWKfJ9P");
+const THREE_YEARS_SECS: i64 = 31_536_000 * 3; // 3 years in seconds
+pub const DEV_TREASURY: Pubkey = pubkey!("6Vf19AT2sKunpBS7kvPA1Tqw9QZE9UGso3Pc1jg2nYj5");
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Program
 // ─────────────────────────────────────────────────────────────────────────────
 #[program]
-pub mod pump_vaults {
+pub mod driplet_vaults {
     use super::*;
+
+    pub fn disable_new_vaults(ctx: Context<DisableNewVaults>) -> Result<()> {
+        let state = &mut ctx.accounts.global_state;
+        require!(
+            ctx.accounts.dev_treasury.key() == state.admin,
+            VaultError::Unauthorized
+        );
+        state.new_vaults_disabled = true;
+        Ok(())
+    }
+
+    pub fn init_global_state(ctx: Context<InitGlobalState>) -> Result<()> {
+        let state = &mut ctx.accounts.global_state;
+        state.new_vaults_disabled = false;
+        state.admin = ctx.accounts.dev_treasury.key();
+        Ok(())
+    }
 
     pub fn create_vault(
         ctx: Context<CreateVault>,
         reward_net: u64,
         maybe_start_time: Option<i64>,
+        vault_id: u64,                    // NEW
     ) -> Result<()> {
+        // Enforce no new vaults if disabled
+        require!(
+            !ctx.accounts.global_state.new_vaults_disabled,
+            VaultError::VaultCreationDisabled
+        );
         require!(reward_net > 0, VaultError::ZeroAmount);
 
         // 0) Creation fee (SOL) -> dev treasury
         let dev_treasury = ctx.accounts.dev_treasury.to_account_info();
-        let admin = ctx.accounts.admin.to_account_info();
+        let creator = ctx.accounts.creator.to_account_info();
         invoke(
-            &system_instruction::transfer(&admin.key(), &dev_treasury.key(), CREATION_FEE_LAMPORTS),
+            &system_instruction::transfer(&creator.key(), &dev_treasury.key(), CREATION_FEE_LAMPORTS),
             &[
-                admin.clone(),
+                creator.clone(),
                 dev_treasury.clone(),
                 ctx.accounts.system_program.to_account_info(),
             ],
@@ -51,7 +71,7 @@ pub mod pump_vaults {
 
         // 1) Times
         let now = Clock::get()?.unix_timestamp;
-        let start = maybe_start_time.unwrap_or(now + 300); // default: starts in 5 minutes
+        let start = maybe_start_time.unwrap_or(now + 300);
         let end = start + TERM_SECS;
 
         // 2) Fees & totals
@@ -60,19 +80,58 @@ pub mod pump_vaults {
             .checked_add(fee_tokens)
             .ok_or(VaultError::MathOverflow)?;
 
-        // 3) Cache keys/bumps BEFORE any &mut borrow
-        let vault_key   = ctx.accounts.vault.key();
+        // 3) Cache keys/bumps BEFORE mutable borrow
+        let vault_key = ctx.accounts.vault.key();
         let reward_bump = ctx.bumps.vault_reward_authority;
         let escrow_bump = ctx.bumps.vault_escrow_authority;
+        let mint_key = ctx.accounts.mint.key();
 
-        // 4) Admin sends gross rewards to vault reward ATA
+        // --- SANITY CHECKS (before any CPI) ---
+        require!(
+            accessor::mint(&ctx.accounts.creator_token_ata.to_account_info())? == mint_key,
+            VaultError::BadMint
+        );
+        require!(
+            accessor::mint(&ctx.accounts.reward_vault_ata.to_account_info())? == mint_key,
+            VaultError::BadMint
+        );
+        require!(
+            accessor::mint(&ctx.accounts.dev_token_ata.to_account_info())? == mint_key,
+            VaultError::BadMint
+        );
+        require!(
+            accessor::mint(&ctx.accounts.vault_escrow_ata.to_account_info())? == mint_key,
+            VaultError::BadMint
+        );
+        require!(
+            accessor::authority(&ctx.accounts.reward_vault_ata.to_account_info())?
+                == ctx.accounts.vault_reward_authority.key(),
+            VaultError::BadMint
+        );
+        require!(
+            accessor::authority(&ctx.accounts.vault_escrow_ata.to_account_info())?
+                == ctx.accounts.vault_escrow_authority.key(),
+            VaultError::BadMint
+        );
+        require!(
+            accessor::authority(&ctx.accounts.creator_token_ata.to_account_info())?
+                == ctx.accounts.creator.key(),
+            VaultError::BadMint
+        );
+        require!(
+            accessor::authority(&ctx.accounts.dev_token_ata.to_account_info())?
+                == ctx.accounts.dev_treasury.key(),
+            VaultError::BadMint
+        );
+
+        // 4) creator sends gross rewards to vault reward ATA
         token::transfer(
             CpiContext::new(
                 ctx.accounts.token_program.to_account_info(),
                 Transfer {
-                    from: ctx.accounts.admin_token_ata.to_account_info(),
+                    from: ctx.accounts.creator_token_ata.to_account_info(),
                     to: ctx.accounts.reward_vault_ata.to_account_info(),
-                    authority: ctx.accounts.admin.to_account_info(),
+                    authority: ctx.accounts.creator.to_account_info(),
                 },
             ),
             reward_gross,
@@ -92,45 +151,46 @@ pub mod pump_vaults {
             fee_tokens,
         )?;
 
-        // 6) Write vault state (now safe to mut-borrow)
+        // 6) Write vault state
         let vault = &mut ctx.accounts.vault;
-        vault.admin               = ctx.accounts.admin.key();
-        vault.mint                = ctx.accounts.mint.key();
-        vault.start_time          = start;
-        vault.end_time            = end;
-        vault.reward_net          = reward_net;
-        vault.reward_fee          = fee_tokens;
-        vault.reward_gross        = reward_gross;
-
+        vault.id = vault_id;                          // NEW: persist the id
+        vault.creator = ctx.accounts.creator.key();
+        vault.mint = ctx.accounts.mint.key();
+        vault.start_time = start;
+        vault.end_time = end;
+        vault.reward_net = reward_net;
+        vault.reward_fee = fee_tokens;
+        vault.reward_gross = reward_gross;
         vault.rate_fp = (reward_net as u128)
             .checked_mul(RATE_SCALE).ok_or(VaultError::MathOverflow)?
             .checked_div(TERM_SECS as u128).ok_or(VaultError::MathOverflow)?;
-        vault.emission_acc_fp     = 0;
-        vault.emitted             = 0;
-        vault.last_update_time    = start;
-        vault.acc_reward_per_token= 0;
-        vault.unallocated         = 0;
-        vault.total_staked        = 0;
-
-        vault.bump                = ctx.bumps.vault;
-        vault.vault_escrow_bump   = escrow_bump;
-        vault.vault_reward_bump   = reward_bump;
-        vault.version             = 1;
+        vault.emission_acc_fp = 0;
+        vault.emitted = 0;
+        vault.last_update_time = start;
+        vault.acc_reward_per_token = 0;
+        vault.unallocated = 0;
+        vault.total_staked = 0;
+        vault.bump = ctx.bumps.vault;
+        vault.vault_escrow_bump = escrow_bump;
+        vault.vault_reward_bump = reward_bump;
+        vault.version = 1;
 
         Ok(())
     }
 
-
     pub fn deposit(ctx: Context<Deposit>, amount: u64) -> Result<()> {
         require!(amount > 0, VaultError::ZeroAmount);
 
-        // store vault key before mutable borrow
-        let vault_key = ctx.accounts.vault.key();
+        let v = &mut ctx.accounts.vault;
 
-        let vault = &mut ctx.accounts.vault;
-        update_rewards(vault)?;
+        // Allow deposits only within [start_time, end_time]
+        let now = Clock::get()?.unix_timestamp;
+        require!(now >= v.start_time && now <= v.end_time, VaultError::VaultEnded);
 
-        // user -> escrow
+        update_rewards(v)?;
+
+        let vault_key = v.key();
+
         token::transfer(
             CpiContext::new(
                 ctx.accounts.token_program.to_account_info(),
@@ -143,22 +203,22 @@ pub mod pump_vaults {
             amount,
         )?;
 
-        // user stake state
         let user_stake = &mut ctx.accounts.user_stake;
         if user_stake.initialized == 0 {
             user_stake.owner = ctx.accounts.user.key();
-            user_stake.vault = vault_key; // use cached key
+            user_stake.vault = vault_key;
             user_stake.amount = 0;
             user_stake.reward_debt = 0;
             user_stake.initialized = 1;
         }
 
-        vault.total_staked = vault.total_staked.checked_add(amount).ok_or(VaultError::MathOverflow)?;
+        v.total_staked = v.total_staked.checked_add(amount).ok_or(VaultError::MathOverflow)?;
         user_stake.amount = user_stake.amount.checked_add(amount).ok_or(VaultError::MathOverflow)?;
-        user_stake.reward_debt = reward_debt(user_stake.amount, vault.acc_reward_per_token);
+        user_stake.reward_debt = reward_debt(user_stake.amount, v.acc_reward_per_token);
 
         Ok(())
     }
+
 
 
     pub fn claim(ctx: Context<Claim>) -> Result<()> {
@@ -167,14 +227,13 @@ pub mod pump_vaults {
 
         payout_pending(
             vault,
-            &ctx.accounts.user_stake, 
+            &ctx.accounts.user_stake,
             ctx.accounts.reward_vault_ata.to_account_info(),
             ctx.accounts.user_token_ata.to_account_info(),
             ctx.accounts.token_program.to_account_info(),
             ctx.accounts.vault_reward_authority.to_account_info(),
         )?;
 
-        // refresh debt after paying
         let user = &mut ctx.accounts.user_stake;
         user.reward_debt = reward_debt(user.amount, vault.acc_reward_per_token);
         Ok(())
@@ -182,15 +241,11 @@ pub mod pump_vaults {
 
     pub fn withdraw(ctx: Context<Withdraw>, amount: u64, claim_all: bool) -> Result<()> {
         require!(amount > 0, VaultError::ZeroAmount);
-
-        // cache vault info before mut borrow
         let vault_key = ctx.accounts.vault.key();
         let escrow_bump = ctx.accounts.vault.vault_escrow_bump;
-
         let vault = &mut ctx.accounts.vault;
         update_rewards(vault)?;
 
-        // optional claim first
         if claim_all {
             payout_pending(
                 vault,
@@ -202,7 +257,6 @@ pub mod pump_vaults {
             )?;
         }
 
-        // escrow -> user
         let user_stake = &mut ctx.accounts.user_stake;
         require!(user_stake.amount >= amount, VaultError::InsufficientStake);
 
@@ -219,63 +273,89 @@ pub mod pump_vaults {
             amount,
         )?;
 
-        user_stake.amount = user_stake.amount.checked_sub(amount).ok_or(VaultError::MathOverflow)?;
-        vault.total_staked = vault.total_staked.checked_sub(amount).ok_or(VaultError::MathOverflow)?;
+        user_stake.amount =
+            user_stake.amount.checked_sub(amount).ok_or(VaultError::MathOverflow)?;
+        vault.total_staked =
+            vault.total_staked.checked_sub(amount).ok_or(VaultError::MathOverflow)?;
         user_stake.reward_debt = reward_debt(user_stake.amount, vault.acc_reward_per_token);
-
         Ok(())
     }
 
-
-    pub fn close_vault(ctx: Context<CloseVault>) -> Result<()> {
-    // cache first
-    let vault_key   = ctx.accounts.vault.key();
+    pub fn close_vault(ctx: Context<CloseVaultTreasuryOnly>) -> Result<()> {
+    let vault_key = ctx.accounts.vault.key();
     let reward_bump = ctx.accounts.vault.vault_reward_bump;
     let escrow_bump = ctx.accounts.vault.vault_escrow_bump;
-
     let vault = &mut ctx.accounts.vault;
     let now = Clock::get()?.unix_timestamp;
-    require!(now >= vault.end_time, VaultError::NotEnded);
-    require!(vault.total_staked == 0, VaultError::StillStaked);
 
-    // use cached values in signer seeds
-    // sweep
-    if ctx.accounts.reward_vault_ata.amount > 0 {
+    // Enforce 3-year grace period after the vault term ends
+    require!(
+        now >= vault.end_time + THREE_YEARS_SECS,
+        VaultError::GraceNotElapsed
+    );
+
+    // ── Sweep remaining rewards -> dev token ATA
+    let rewards_left = ctx.accounts.reward_vault_ata.amount;
+    if rewards_left > 0 {
         token::transfer(
             CpiContext::new_with_signer(
                 ctx.accounts.token_program.to_account_info(),
                 Transfer {
                     from: ctx.accounts.reward_vault_ata.to_account_info(),
-                    to: ctx.accounts.admin_token_ata.to_account_info(),
+                    to: ctx.accounts.dev_token_ata.to_account_info(),
                     authority: ctx.accounts.vault_reward_authority.to_account_info(),
                 },
                 &[&[b"vault_reward", vault_key.as_ref(), &[reward_bump]]],
             ),
-            ctx.accounts.reward_vault_ata.amount,
+            rewards_left,
         )?;
     }
 
-    // close reward ATA
+    // ── Sweep remaining escrow (unwithdrawn deposits) -> dev token ATA
+    let escrow_left = ctx.accounts.vault_escrow_ata.amount;
+    if escrow_left > 0 {
+        token::transfer(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.vault_escrow_ata.to_account_info(),
+                    to: ctx.accounts.dev_token_ata.to_account_info(),
+                    authority: ctx.accounts.vault_escrow_authority.to_account_info(),
+                },
+                &[&[b"vault_escrow", vault_key.as_ref(), &[escrow_bump]]],
+            ),
+            escrow_left,
+        )?;
+        // reset global accounting since all deposits were swept
+        vault.total_staked = 0;
+    }
+
+    // Ensure both ATAs are empty before closing
+    ctx.accounts.reward_vault_ata.reload()?;
+    ctx.accounts.vault_escrow_ata.reload()?;
+    require!(ctx.accounts.reward_vault_ata.amount == 0, VaultError::RewardNotEmpty);
+    require!(ctx.accounts.vault_escrow_ata.amount == 0, VaultError::EscrowNotEmpty);
+
+    // Close reward ATA (lamports to dev treasury)
     token::close_account(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
             CloseAccount {
                 account: ctx.accounts.reward_vault_ata.to_account_info(),
-                destination: ctx.accounts.admin.to_account_info(),
+                destination: ctx.accounts.dev_treasury.to_account_info(),
                 authority: ctx.accounts.vault_reward_authority.to_account_info(),
             },
             &[&[b"vault_reward", vault_key.as_ref(), &[reward_bump]]],
         ),
     )?;
 
-    // close escrow ATA
-    require!(ctx.accounts.vault_escrow_ata.amount == 0, VaultError::EscrowNotEmpty);
+    // Close escrow ATA (lamports to dev treasury)
     token::close_account(
         CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
             CloseAccount {
                 account: ctx.accounts.vault_escrow_ata.to_account_info(),
-                destination: ctx.accounts.admin.to_account_info(),
+                destination: ctx.accounts.dev_treasury.to_account_info(),
                 authority: ctx.accounts.vault_escrow_authority.to_account_info(),
             },
             &[&[b"vault_escrow", vault_key.as_ref(), &[escrow_bump]]],
@@ -284,12 +364,15 @@ pub mod pump_vaults {
 
     Ok(())
 }
+pub fn admin_close_expired_stake(_ctx: Context<AdminCloseExpiredStake>) -> Result<()> {
+    Ok(())
 }
 
-
+}
 // ─────────────────────────────────────────────────────────────────────────────
 // Internal helpers
 // ─────────────────────────────────────────────────────────────────────────────
+
 fn update_rewards(v: &mut Account<Vault>) -> Result<()> {
     let now = Clock::get()?.unix_timestamp;
     let capped_now = now.min(v.end_time);
@@ -299,15 +382,15 @@ fn update_rewards(v: &mut Account<Vault>) -> Result<()> {
 
     let dt = (capped_now - v.last_update_time) as u128;
 
-    // accumulate fractional emission
+    // Accumulate fractional emission
     let add_fp = v.rate_fp.checked_mul(dt).ok_or(VaultError::MathOverflow)?;
     v.emission_acc_fp = v.emission_acc_fp.checked_add(add_fp).ok_or(VaultError::MathOverflow)?;
 
-    // convert to integer tokens and keep remainder
+    // Convert to integer tokens and keep remainder
     let mut to_emit = (v.emission_acc_fp / RATE_SCALE) as u64;
     v.emission_acc_fp %= RATE_SCALE;
 
-    // clamp by remaining rewards
+    // Clamp to remaining
     let remaining = v.reward_net.saturating_sub(v.emitted);
     if to_emit > remaining {
         to_emit = remaining;
@@ -318,17 +401,27 @@ fn update_rewards(v: &mut Account<Vault>) -> Result<()> {
             v.unallocated = v.unallocated.saturating_add(to_emit);
         } else {
             let total = (v.unallocated as u128)
-                .checked_add(to_emit as u128)
-                .ok_or(VaultError::MathOverflow)?;
+                .checked_add(to_emit as u128).ok_or(VaultError::MathOverflow)?;
             let incr = total
-                .checked_mul(RPT_SCALE)
-                .ok_or(VaultError::MathOverflow)?
-                .checked_div(v.total_staked as u128)
-                .ok_or(VaultError::MathOverflow)?;
-            v.acc_reward_per_token = v.acc_reward_per_token.checked_add(incr).ok_or(VaultError::MathOverflow)?;
+                .checked_mul(RPT_SCALE).ok_or(VaultError::MathOverflow)?
+                .checked_div(v.total_staked as u128).ok_or(VaultError::MathOverflow)?;
+            v.acc_reward_per_token = v.acc_reward_per_token
+                .checked_add(incr).ok_or(VaultError::MathOverflow)?;
             v.unallocated = 0;
         }
         v.emitted = v.emitted.saturating_add(to_emit);
+    } else {
+        // NEW: If the term is over (or no fresh emission this tick), but there are stakers
+        // and unallocated rewards, flush the backlog now so late-but-still-in-term stakers
+        // receive prior empty-time emissions.
+        if v.total_staked > 0 && v.unallocated > 0 {
+            let incr = (v.unallocated as u128)
+                .checked_mul(RPT_SCALE).ok_or(VaultError::MathOverflow)?
+                .checked_div(v.total_staked as u128).ok_or(VaultError::MathOverflow)?;
+            v.acc_reward_per_token = v.acc_reward_per_token
+                .checked_add(incr).ok_or(VaultError::MathOverflow)?;
+            v.unallocated = 0;
+        }
     }
 
     v.last_update_time = capped_now;
@@ -368,7 +461,6 @@ fn payout_pending<'info>(
         return Ok(());
     }
 
-    // Read amount without borrowing the account for the rest of the function
     let reward_balance = accessor::amount(&reward_vault_ata)?;
     let to_pay = pend.min(reward_balance);
 
@@ -376,7 +468,7 @@ fn payout_pending<'info>(
         CpiContext::new_with_signer(
             token_program,
             Transfer {
-                from: reward_vault_ata,   // now free to move
+                from: reward_vault_ata,
                 to: user_token_ata,
                 authority: vault_reward_authority,
             },
@@ -391,10 +483,18 @@ fn payout_pending<'info>(
 // Accounts
 // ─────────────────────────────────────────────────────────────────────────────
 
+
 #[derive(Accounts)]
+#[instruction(vault_id: u64)] // allow using the instruction arg in PDA seeds
 pub struct CreateVault<'info> {
+    #[account(
+        seeds = [b"state"],
+        bump
+    )]
+    pub global_state: Account<'info, GlobalState>,
+
     #[account(mut)]
-    pub admin: Signer<'info>,
+    pub creator: Signer<'info>,
 
     // Fixed dev treasury (SOL receiver for the creation fee)
     #[account(mut, address = DEV_TREASURY)]
@@ -402,12 +502,17 @@ pub struct CreateVault<'info> {
 
     pub mint: Account<'info, Mint>,
 
-    // The vault state. We keep this bump in ctx.bumps.vault.
+    // The vault state. Bump captured in `ctx.bumps.vault`.
     #[account(
         init,
-        payer = admin,
+        payer = creator,
         space = 8 + Vault::SPACE,
-        seeds = [b"vault", mint.key().as_ref(), admin.key().as_ref()],
+        seeds = [
+            b"vault",
+            mint.key().as_ref(),
+            creator.key().as_ref(),
+            &vault_id.to_le_bytes()         // NEW: allow multiple vaults per (mint, creator)
+        ],
         bump
     )]
     pub vault: Account<'info, Vault>,
@@ -420,24 +525,27 @@ pub struct CreateVault<'info> {
     #[account(seeds = [b"vault_reward", vault.key().as_ref()], bump)]
     pub vault_reward_authority: UncheckedAccount<'info>,
 
-    // Pre-created ATAs (we don’t init them on-chain here to keep stack small)
-    /// CHECK:
+    /// CHECK: pre-created vault escrow ATA (must match escrow mint/authority)
     #[account(mut)]
     pub vault_escrow_ata: UncheckedAccount<'info>,
-    /// CHECK:
+
+    /// CHECK: pre-created reward vault ATA (must match reward mint/authority)
     #[account(mut)]
     pub reward_vault_ata: UncheckedAccount<'info>,
-    /// CHECK: admin’s funding ATA (must exist)
+
+    /// CHECK: creator’s funding ATA (must exist)
     #[account(mut)]
-    pub admin_token_ata: UncheckedAccount<'info>,
+    pub creator_token_ata: UncheckedAccount<'info>,
+
     /// CHECK: dev treasury’s ATA (pre-created)
     #[account(mut)]
     pub dev_token_ata: UncheckedAccount<'info>,
 
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
-    // Intentionally dropping associated_token_program + rent here to reduce stack
+    // intentionally dropping associated_token_program + rent to reduce stack
 }
+
 
 #[derive(Accounts)]
 pub struct Deposit<'info> {
@@ -452,6 +560,7 @@ pub struct Deposit<'info> {
         seeds = [b"vault_escrow", vault.key().as_ref()],
         bump = vault.vault_escrow_bump
     )]
+
     pub vault_escrow_authority: UncheckedAccount<'info>,
 
     #[account(
@@ -588,29 +697,55 @@ pub struct Withdraw<'info> {
 }
 
 #[derive(Accounts)]
-pub struct CloseVault<'info> {
-    #[account(mut)]
-    pub admin: Signer<'info>,
+pub struct AdminCloseExpiredStake<'info> {
+    #[account(mut, address = DEV_TREASURY)]
+    pub dev_treasury: Signer<'info>,
 
-    #[account(mut, has_one = admin, has_one = mint, close = admin)]
+    /// Close the UserStake PDA to the dev treasury after grace
+    #[account(
+        mut,
+        close = dev_treasury,
+        constraint = user_stake.vault == vault.key(),
+        // 3-year grace after vault term
+        constraint = Clock::get()?.unix_timestamp >= vault.end_time + THREE_YEARS_SECS @ VaultError::GraceNotElapsed,
+    )]
+    pub user_stake: Account<'info, UserStake>,
+
+    /// Needed for end_time; must be typed to pass constraint above
+    pub vault: Account<'info, Vault>,
+}
+
+#[derive(Accounts)]
+pub struct CloseVaultTreasuryOnly<'info> {
+    /// Treasury must sign and be the fixed DEV_TREASURY
+    #[account(mut, address = DEV_TREASURY)]
+    pub dev_treasury: Signer<'info>,
+
+    /// Vault state is closed to treasury
+    #[account(
+        mut,
+        has_one = mint,
+        close = dev_treasury
+    )]
     pub vault: Account<'info, Vault>,
 
     pub mint: Account<'info, Mint>,
 
-    /// CHECK: PDA signer for reward ATA
+    /// CHECK: Reward PDA signer
     #[account(
         seeds = [b"vault_reward", vault.key().as_ref()],
         bump = vault.vault_reward_bump
     )]
     pub vault_reward_authority: UncheckedAccount<'info>,
 
-    /// CHECK: PDA signer for escrow ATA
+    /// CHECK: Escrow PDA signer
     #[account(
         seeds = [b"vault_escrow", vault.key().as_ref()],
         bump = vault.vault_escrow_bump
     )]
     pub vault_escrow_authority: UncheckedAccount<'info>,
 
+    // Vault reward ATA (owned by reward PDA)
     #[account(
         mut,
         associated_token::mint = vault.mint,
@@ -618,6 +753,7 @@ pub struct CloseVault<'info> {
     )]
     pub reward_vault_ata: Account<'info, TokenAccount>,
 
+    // Vault escrow ATA (owned by escrow PDA)
     #[account(
         mut,
         associated_token::mint = vault.mint,
@@ -625,13 +761,14 @@ pub struct CloseVault<'info> {
     )]
     pub vault_escrow_ata: Account<'info, TokenAccount>,
 
+    // Treasury ATA (recipient of leftovers; create if missing)
     #[account(
         init_if_needed,
-        payer = admin,
+        payer = dev_treasury,
         associated_token::mint = mint,
-        associated_token::authority = admin
+        associated_token::authority = dev_treasury
     )]
-    pub admin_token_ata: Account<'info, TokenAccount>,
+    pub dev_token_ata: Account<'info, TokenAccount>,
 
     pub token_program: Program<'info, Token>,
     pub associated_token_program: Program<'info, AssociatedToken>,
@@ -639,13 +776,57 @@ pub struct CloseVault<'info> {
     pub rent: Sysvar<'info, Rent>,
 }
 
+#[derive(Accounts)]
+pub struct InitConfig<'info> {
+    #[account(mut, address = DEV_TREASURY)]
+    pub dev_treasury: Signer<'info>,
+
+    #[account(
+        init,
+        payer = dev_treasury,
+        // Anchor adds the 8-byte discriminator; you add your raw struct size.
+        space = 8 + Config::SPACE,
+        seeds = [b"config"],
+        bump
+    )]
+    pub config: Account<'info, Config>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct InitGlobalState<'info> {
+    #[account(
+        init,
+        payer = dev_treasury,
+        space = 8 + GlobalState::SPACE,
+        seeds = [b"state"],
+        bump
+    )]
+    pub global_state: Account<'info, GlobalState>,
+
+    #[account(mut, address = DEV_TREASURY)]
+    pub dev_treasury: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct DisableNewVaults<'info> {
+    #[account(mut, address = DEV_TREASURY)]
+    pub dev_treasury: Signer<'info>,
+
+    #[account(mut, seeds = [b"state"], bump)]
+    pub global_state: Account<'info, GlobalState>,
+}
 // ─────────────────────────────────────────────────────────────────────────────
 // State
 // ─────────────────────────────────────────────────────────────────────────────
 #[account]
 pub struct Vault {
     // immutable params
-    pub admin: Pubkey,
+    pub id: u64,
+    pub creator: Pubkey,
     pub mint: Pubkey,
     pub start_time: i64,
     pub end_time: i64,
@@ -671,8 +852,9 @@ pub struct Vault {
     pub version: u8,
 }
 impl Vault {
-    pub const SPACE: usize = 256;
+    pub const SPACE: usize = 264;
 }
+
 
 #[account]
 pub struct UserStake {
@@ -684,6 +866,25 @@ pub struct UserStake {
 }
 impl UserStake {
     pub const SPACE: usize = 128;
+}
+
+#[account]
+pub struct GlobalState {
+    pub new_vaults_disabled: bool,
+    pub admin: Pubkey, // hardcoded as DEV_TREASURY on init
+}
+impl GlobalState {
+    pub const SPACE: usize = 40;
+}
+
+#[account]
+pub struct Config {
+    pub new_vaults_disabled: u8, // 1 byte
+    pub retired_at: i64,         // 8 bytes
+}
+impl Config {
+    // raw struct size ONLY (no discriminator here)
+    pub const SPACE: usize = 1 + 8;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -703,4 +904,23 @@ pub enum VaultError {
     EscrowNotEmpty,
     #[msg("Insufficient staked amount")]
     InsufficientStake,
+    #[msg("Reward token account is not empty after sweep")]
+    RewardNotEmpty,
+    #[msg("Provided token account does not match vault mint")]
+    BadMint,
+     #[msg("Program is retired. New vaults are disabled.")]
+    ProgramRetired,
+    #[msg("Only dev treasury may retire.")]
+    NotTreasury,
+    #[msg("Already retired.")]
+    AlreadyRetired,
+    #[msg("Grace period not yet elapsed.")]
+    GraceNotElapsed,
+    #[msg("Vault creation has been disabled")]
+    VaultCreationDisabled,
+    #[msg("Unauthorized action")]
+    Unauthorized,
+    #[msg("Deposits are closed for this vault")]
+    VaultEnded,
+
 }
