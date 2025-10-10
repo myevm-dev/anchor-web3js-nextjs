@@ -145,15 +145,16 @@ export function NavBar() {
               <TopLink href="/retro" exact badge={{ label: "LIVE", color: "green" }}>
                 Retro
               </TopLink>
-              <TopLink href="/trade" badge={{ label: "SOON", color: "red" }}>
-                Trade
-              </TopLink>
+              
               <TopLink href="/" exact badge={{ label: "SOON", color: "red" }}>
                 Vaults
               </TopLink>
 
               <TopLink href="/manage" badge={{ label: "SOON", color: "red" }}>
                 Manage
+              </TopLink>
+              <TopLink href="/trade" badge={{ label: "SOON", color: "red" }}>
+                Trade
               </TopLink>
               <TopLink href="/about" badge={{ label: "DRIPLET", color: "purple" }}>
                 About
@@ -187,12 +188,7 @@ export function NavBar() {
               exact
               badge={{ label: "LIVE", color: "green" }}
             />
-                        <MobileLink
-              href="/trade"
-              label="Trade"
-              Icon={CandlestickChart}
-              badge={{ label: "SOON", color: "red" }}
-            />
+
             <MobileLink
               href="/"
               label="Vaults"
@@ -205,6 +201,12 @@ export function NavBar() {
               href="/manage"
               label="Manage"
               Icon={Settings2}
+              badge={{ label: "SOON", color: "red" }}
+            />
+            <MobileLink
+              href="/trade"
+              label="Trade"
+              Icon={CandlestickChart}
               badge={{ label: "SOON", color: "red" }}
             />
             {/* About would make it 5 icons; keep 4 for symmetry on mobile */}
